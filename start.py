@@ -17,7 +17,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 MENU = """
 ========================================
-  MYG 2026
+  FINAL2026
   Välj. Resten körs själv.
 ========================================
   1  Short            9:16    45 sek
