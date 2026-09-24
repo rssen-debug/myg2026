@@ -18,18 +18,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 MENU = """
 ========================================
   FINAL2026
-  Välj. Resten körs själv.
+  Två val. Resten körs själv.
 ========================================
-  1  Short            9:16    45 sek
-  2  YouTube          16:9    5 min
-  3  YouTube          16:9    10 min
-  4  YouTube          16:9    15 min
-  5  Förhandsvisning  320p    snabb kolla
-  6  Testa nyckeln
-  0  Avsluta
+  1  SHORT       9:16    ~45 sek
+  2  YOUTUBE     16:9    5/10/15 min
+  0  AVSLUTA
 ========================================"""
 
-MODES = {"1": "short", "2": "doc5", "3": "doc10", "4": "doc15"}
+MODES = {"1": "short", "2": "doc10"}
 
 
 def _ask(prompt):
@@ -146,44 +142,32 @@ def menu():
     os.chdir(HERE)
     print(MENU)
     if not shutil.which("ffmpeg"):
-        print("\n[!!] ffmpeg saknas. Windows: gyan.dev full build, lägg på PATH.")
-        print("     Testa:  ffmpeg -filters | findstr ass")
+        print("\n[!!] ffmpeg saknas. FINAL2026 försöker installera det via start-bootstrap.")
+        print("     Du kan även installera FFmpeg manuellt och starta om.")
     if not _chrome():
-        print("[!!] Chrome/Edge hittades inte. Sätt CHROME till exe-filen.")
+        print("[!!] Chrome/Edge hittades inte ännu.")
     if not os.environ.get("CEREBRAS_API_KEY"):
-        print("[??] Ingen CEREBRAS_API_KEY i det här fönstret.")
-        print("     set CEREBRAS_API_KEY=csk-...     och starta om scriptet.")
+        print("[??] Ingen CEREBRAS_API_KEY i detta fönster.")
+        print("     FINAL2026 kan fråga efter nyckeln via FINAL2026.py.")
     if not _fix_missing():
-        print("Fixa det som saknas, kör python start.py igen.")
+        print("Fixa det som saknas, kör FINAL2026.py igen.")
         return
     while True:
         print(MENU)
         choice = _ask("Val: ")
         if choice in ("0", "q", "exit", ""):
-            if choice in ("0", "q", "exit"):
-                return
-            continue
-        if choice == "6":
-            import llm
-            print("LLM:", llm.describe())
-            print("self-test:", "PASS" if llm.self_test() else "FAIL")
-            continue
-        if choice == "5":
-            sub = _ask("Vilken? 1 short  2 fem  3 tio  4 femton: ")
-            mode = MODES.get(sub)
-            if not mode:
-                print("Okänt val.")
-                continue
-            topic = _ask("Ämne (eller auto): ") or "auto"
-            _run(mode, topic, preview=True)
-            continue
+            return
         mode = MODES.get(choice)
         if not mode:
-            print("Okänt val.")
+            print("Välj 1 eller 2.")
             continue
-        topic = _ask("Ämne (eller auto): ") or "auto"
-        _run(mode, topic, preview=False)
-
+        # The normal user experience is deliberately topic-free.
+        # The scout chooses a fresh production candidate automatically.
+        topic = "auto"
+        if mode == "short":
+            _run("short", topic, preview=False)
+        else:
+            _run("doc10", topic, preview=False)
 
 if __name__ == "__main__":
     menu()
