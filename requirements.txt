@@ -8,3 +8,5 @@ imagehash
 pillow
 # optional (better B-roll matching, heavy):
 # sentence-transformers
+
+imageio-ffmpeg
