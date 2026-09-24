@@ -1,0 +1,10 @@
+numpy
+opencv-contrib-python==4.10.0.84
+yt-dlp
+edge-tts==7.2.8
+faster-whisper==1.0.3
+requests
+imagehash
+pillow
+# optional (better B-roll matching, heavy):
+# sentence-transformers

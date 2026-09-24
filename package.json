@@ -1,0 +1,10 @@
+{
+  "name": "sunny-pipeline",
+  "private": true,
+  "type": "module",
+  "description": "HTML + Three.js graphics layer. Chromium renders frames. React is not the film runtime.",
+  "dependencies": {
+    "puppeteer-core": "24.15.0",
+    "three": "0.170.0"
+  }
+}

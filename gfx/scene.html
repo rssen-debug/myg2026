@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Anton; src: url("fonts/Anton-Regular.ttf"); }
+  @font-face { font-family: Bebas; src: url("fonts/BebasNeue-Regular.ttf"); }
+  @font-face { font-family: Archivo; src: url("fonts/ArchivoBlack-Regular.ttf"); }
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  #stage { position: relative; overflow: hidden; }
+  canvas#world { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .el { position: absolute; }
+  .hidden { opacity: 0; }
+  #kicker {
+    font-family: Bebas, Impact, sans-serif;
+    color: #fff; background: #e8222e; letter-spacing: 3px;
+    padding: 2px 10px 1px; display: inline-block;
+  }
+  #hook {
+    font-family: Anton, Impact, sans-serif;
+    color: #fff; text-align: center; line-height: 0.9;
+    letter-spacing: 0.5px;
+    text-shadow: 0 4px 0 #000, 0 0 22px rgba(0,0,0,.8);
+    -webkit-text-stroke: 6px #000;
+    paint-order: stroke fill;
+  }
+  #hookline {
+    height: 7px; background: #e8222e; transform-origin: center;
+    margin: 10px auto 0; width: 18%;
+  }
+  #lower { display: flex; flex-direction: column; align-items: flex-start; }
+  #lower .bar { height: 8px; background: #e8222e; margin-bottom: 8px; }
+  #lower .name {
+    font-family: Archivo, Impact, sans-serif; color: #fff;
+    background: rgba(8,8,12,.82); padding: 6px 14px 5px; letter-spacing: 0.5px;
+  }
+  #lower .sub {
+    font-family: Bebas, Impact, sans-serif; color: #fff;
+    background: #e8222e; padding: 3px 12px 1px; letter-spacing: 2px; margin-top: 0;
+  }
+  #stat { text-align: center; }
+  #stat .big {
+    font-family: Anton, Impact, sans-serif; color: #fff; line-height: 0.88;
+    text-shadow: 0 6px 0 #111, 0 0 28px rgba(232,34,46,.9);
+  }
+  #stat .label {
+    font-family: Bebas, Impact, sans-serif; color: #fff; letter-spacing: 4px;
+    background: #e8222e; display: inline-block; padding: 3px 14px; margin-top: 6px;
+  }
+  #caps {
+    text-align: center;
+    font-family: Archivo, Impact, sans-serif; color: #ffe14a; line-height: 1.02;
+    text-shadow: 0 3px 0 #000, 0 0 14px rgba(0,0,0,.9);
+    -webkit-text-stroke: 5px #000;
+    paint-order: stroke fill;
+  }
+  .bracket { position: absolute; width: 28px; height: 28px; opacity: 0.8; }
+  .bracket i { position: absolute; background: #fff; }
+  .bracket.tl i.h, .bracket.tr i.h { top: 0; height: 3px; width: 100%; }
+  .bracket.bl i.h, .bracket.br i.h { bottom: 0; height: 3px; width: 100%; }
+  .bracket.tl i.v, .bracket.bl i.v { left: 0; width: 3px; height: 100%; }
+  .bracket.tr i.v, .bracket.br i.v { right: 0; width: 3px; height: 100%; }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="world"></canvas>
+    <div id="brackets">
+      <div class="bracket tl"><i class="h"></i><i class="v"></i></div>
+      <div class="bracket tr"><i class="h"></i><i class="v"></i></div>
+      <div class="bracket bl"><i class="h"></i><i class="v"></i></div>
+      <div class="bracket br"><i class="h"></i><i class="v"></i></div>
+    </div>
+    <div id="kicker" class="el hidden"></div>
+    <div id="hook" class="el hidden"></div>
+    <div id="hookline" class="el hidden"></div>
+    <div id="stat" class="el hidden"><div class="big"></div><div class="label"></div></div>
+    <div id="lower" class="el hidden"><div class="bar"></div><div class="name"></div><div class="sub"></div></div>
+    <div id="caps" class="el hidden"></div>
+  </div>
+  <script type="module" src="scene.js"></script>
+</body>
+</html>
