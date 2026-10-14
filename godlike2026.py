@@ -127,6 +127,7 @@ CONFIG: Dict[str, Any] = {
     "MIN_LIQUIDITY_USD": D("15000.00"),   # Minsta pool-likviditet ($15k)
     "MAX_TOP10_INSIDER_PCT": D("20.0"),   # Max andel för top 10 insiders (exkl pool-valv)
     "MAX_RUGCHECK_SCORE": 250,            # Max tillåten RugCheck riskpoäng
+    "TOKEN2022_METADATA_PAPER_EXPERIMENT": False, # Opt-in; live remains hard-blocked
     "MIN_LP_LOCKED_BURNED_PCT": D("85.0"), # Minst 85% av LP i målpoolen måste vara låst/bränd
 
     # Live Trading (Jupiter & Solana)
@@ -1199,12 +1200,36 @@ class RugCheckValidator:
         try:
             data = get_public_json(url, timeout=6)
             self.last_error = ""
-            return self._validate_report(data, target_pair_address, expected_mint=mint)
+            attestation = None
+            # A separate, explicit opt-in PAPER experiment may examine
+            # metadata-only Token-2022 mints. It MUST obtain a fresh independent
+            # on-chain owner/extension/authority attestation, not blindly trust
+            # a remote report or downgrade Token-2022 to classic SPL.
+            if self.cfg.get("TOKEN2022_METADATA_PAPER_EXPERIMENT") is True and isinstance(data,dict):
+                token_data = data.get("token") if isinstance(data.get("token"),dict) else {}
+                programs = [o["tokenProgram"] for o in (data,token_data) if "tokenProgram" in o]
+                if programs and all(x=="TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" for x in programs):
+                    from token2022_onchain_inspector import attest_metadata_only_for_paper
+                    decimal_value = token_data.get("decimals")
+                    if isinstance(decimal_value,bool):
+                        return False, "Token-2022 decimalfält är ogiltigt", {}
+                    try:
+                        decimals = int(decimal_value)
+                    except (ValueError,TypeError):
+                        return False, "Token-2022 decimalfält saknas", {}
+                    if str(decimals) != str(decimal_value):
+                        return False, "Token-2022 decimalfält är oexakt", {}
+                    attestation,reason = attest_metadata_only_for_paper(mint,decimals)
+                    if attestation is None:
+                        return False, "Token-2022 on-chain kontroll misslyckades: "+reason, {}
+            return self._validate_report(data, target_pair_address,
+                                         expected_mint=mint, token2022_attestation=attestation)
         except Exception as exc:
             self.last_error = safe_text(exc, 160)
             return False, f"RugCheck-data kunde inte verifieras ({safe_text(exc, 80)})", {}
 
-    def _validate_report(self, data: Any, target_pair_address: str, expected_mint=None) -> Tuple[bool, str, Dict[str, Any]]:
+    def _validate_report(self, data: Any, target_pair_address: str, expected_mint=None,
+                         token2022_attestation=None) -> Tuple[bool, str, Dict[str, Any]]:
         # This helper also makes all validation branches testable without services.
         try:
             if not isinstance(data, dict) or not isinstance(data.get("token"), dict):
@@ -1230,7 +1255,21 @@ class RugCheckValidator:
             if len(set(programs)) > 1:
                 return False, "RugCheck-svaret anger motsägelsefulla tokenprogram; ingen handel tillåten", {}
             if programs[0] != self.CLASSIC_TOKEN_PROGRAM:
-                return False, "Verifierat icke-klassiskt tokenprogram (t.ex. Token-2022) blockeras", {}
+                # Strict default: all non-classic programs blocked. PAPER opt-in
+                # accepts ONLY an independently read, metadata-only Token-2022
+                # mint when all the remaining RugCheck tests also succeed.
+                if (self.cfg.get("TOKEN2022_METADATA_PAPER_EXPERIMENT") is not True or
+                    programs[0] != "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" or
+                    expected_mint is None or
+                    not isinstance(token2022_attestation,dict) or
+                    token2022_attestation.get("mint") != expected_mint or
+                    token2022_attestation.get("purpose") != "PAPER_MINT_INSPECTION_ONLY" or
+                    token2022_attestation.get("token_program") != programs[0] or
+                    set(token2022_attestation.get("extensions", [])) != {"MetadataPointer","TokenMetadata"} or
+                    token2022_attestation.get("onchain_slot") is None or
+                    token2022_attestation.get("rug_safety_verified") is not False or
+                    token2022_attestation.get("sellability_verified") is not False):
+                    return False, "Verifierat icke-klassiskt tokenprogram (t.ex. Token-2022) blockeras", {}
             for obj in (data, token):
                 for field in ("token_extensions", "extensions"):
                     if obj.get(field) not in (None, {}, []):
@@ -1312,7 +1351,12 @@ class RugCheckValidator:
             insider_sum = sum(sorted(percentages, reverse=True)[:10], ZERO)
             if insider_sum > self.cfg["MAX_TOP10_INSIDER_PCT"]:
                 return False, f"Top 10-andel är för hög ({insider_sum:.1f}%)", {}
-            return True, f"Rapportfilter godkänt (score {score}, målpoolens LP {secured:.1f}%); ingen säljbarhetsgaranti", {"decimals": decimals, "paper_liquidity_cap_usd": paper_liquidity_cap}
+            metadata = {"decimals": decimals, "paper_liquidity_cap_usd": paper_liquidity_cap}
+            if token2022_attestation is not None:
+                if token2022_attestation.get("decimals") != decimals:
+                    return False, "Token-2022 decimals och on-chain data avviker", {}
+                metadata["token2022_paper_attestation"] = token2022_attestation
+            return True, f"Rapportfilter godkänt (score {score}, målpoolens LP {secured:.1f}%); ingen säljbarhetsgaranti", metadata
         except (ValueError, TypeError, InvalidOperation, KeyError) as exc:
             return False, f"Rapportdata kan inte verifieras ({safe_text(exc, 80)})", {}
 
@@ -2031,6 +2075,8 @@ def main():
     parser.add_argument("--duration", type=int, default=1800, help="Paper-sekunder; 0 kör tills Ctrl+C")
     parser.add_argument("--report-dir", default=str(Path(__file__).parent / "reports"))
     parser.add_argument("--stress", action="store_true", help="CSV: kör även 2x gas/DEX fee/slippage")
+    parser.add_argument("--token2022-metadata-paper-experiment", action="store_true",
+                        help="ENDast --realtime --execution quote: metadata-only Token-2022 med oberoende on-chain verifiering; LIVE fortsatt spärrad")
     args = parser.parse_args()
     if args.unit_tests:
         raise SystemExit(0 if run_security_unit_tests() else 1)
@@ -2041,11 +2087,14 @@ def main():
         parser.error("Kapital, orderstorlek och tid måste vara positiva; order <= kapital")
     if args.stress and not args.replay_csv:
         parser.error("--stress kräver --replay-csv")
+    if args.token2022_metadata_paper_experiment and (not args.realtime or args.execution != "quote"):
+        parser.error("Token-2022 experiment tillåts enbart i --realtime --execution quote (PAPER)")
     cfg = dict(CONFIG)
     cfg.update(INITIAL_CASH_USD=args.cash, TRADE_BUDGET_USD=args.trade_budget,
                EXECUTION_MODEL=args.execution,
                OBSIDIAN_VAULT_PATH=args.report_dir, REPLAY_CSV_PATH=args.replay_csv,
-               REPLAY_TOKEN_DECIMALS=args.decimals)
+               REPLAY_TOKEN_DECIMALS=args.decimals,
+               TOKEN2022_METADATA_PAPER_EXPERIMENT=bool(args.token2022_metadata_paper_experiment))
     cfg["DB_PATH"] = args.db or str(Path(__file__).parent / f"paper_session_{time.time_ns()}.db")
     if args.replay_csv and args.decimals is None:
         parser.error("--replay-csv kräver --decimals")
