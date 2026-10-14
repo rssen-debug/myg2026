@@ -75,6 +75,10 @@ def frame(snapshot, width=118, height=38, color=True):
     row(f"SL -{exits.get('INITIAL_STOP_LOSS_PCT', '--')}% | TP1 +{exits.get('TAKE_PROFIT_1_PCT', '--')}%: sälj 40% | TP2 +{exits.get('TAKE_PROFIT_2_PCT', '--')}%: sälj 35% | Trailing {exits.get('MOONBAG_TRAILING_PCT', '--')}%")
     rows.append(rule)
     row(f"DISCOVERY  {snapshot.get('candidates', 0)} bevakade  /  {snapshot.get('unique_evaluated', 0)} unika utvärderade  /  cykel {snapshot.get('cycle_evaluated', 0)} på {snapshot.get('cycle_seconds', 0)}s", "1;36")
+    trench = snapshot.get("trench_labels", {})
+    if trench:
+        row("TRENCH ENDAST MARKNADSOBS (ingen verifierad whale/dev): " +
+            "  ".join(f"{k}={v}" for k,v in trench.items()), "33")
     sources = snapshot.get("discovery", {}).get("sources", [])
     for start in range(0, len(sources), 3):
         row("Flöden: " + "  ".join(f"{s.get('source', '').replace('dex_', '').replace('gecko_', '')} {s.get('count', 0)} [{s.get('status', '?')}]" for s in sources[start:start+3]))
@@ -92,7 +96,8 @@ def frame(snapshot, width=118, height=38, color=True):
     positions = snapshot.get("positions", [])
     row(f"INNEHAV  {len(positions)} öppna", "1;36")
     for pos in positions[:3]:
-        row(f"{pos['symbol']}  raw {pos['remaining_raw']}  SL {pos['stop_loss_price']}  TP1 {pos['tp1_executed']}  TP2 {pos['tp2_executed']}")
+        moonbag = " MOONBAG" if pos.get("tp2_executed") else ""
+        row(f"{pos['symbol']}  raw {pos['remaining_raw']}  SL {pos['stop_loss_price']}  TP1 {pos['tp1_executed']}  TP2 {pos['tp2_executed']}{moonbag}")
     if not positions:
         row("Inga öppna positioner. Inga affärer framtvingas.", "2")
     for reason, count in list(snapshot.get("rejection_reasons", {}).items())[:2]:
