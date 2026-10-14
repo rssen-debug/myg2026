@@ -24,7 +24,7 @@ FILES = {
 }
 # Artifacts also contain published reports. Validate their known names but
 # do not restore stale reports into the new run. Only state files are resumed.
-REPORT_FILES = {"forward_profit_gate.json", "forward_capacity_gate.json", "forward_funnel.json"}
+REPORT_FILES = {"forward_profit_gate.json", "forward_capacity_gate.json", "forward_funnel.json", "forward_trench_funnel.json"}
 
 
 def recognized_report(name):
