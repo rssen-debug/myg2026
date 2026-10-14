@@ -1,0 +1,52 @@
+name: GODLIKE retrospective real-pool MOONBAG experiment
+on:
+  push:
+    branches: [godlike2026-paper-audit]
+    paths:
+      - 'moonbag_historical_replay.py'
+      - 'test_moonbag_historical_replay.py'
+      - '.github/workflows/godlike-moonbag-retrospective.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  historical-moonbag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify actual original Moonbag 40/35/25 accounting and stop behavior
+        run: python -m unittest -v test_moonbag_historical_replay
+      - name: Load ALREADY-INSPECTED public pool OHLCV archive
+        uses: actions/download-artifact@v4
+        with:
+          name: actual-solana-ohlcv-paper-backtest
+          run-id: 38622390493
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: captured_prior_market_data
+      - name: Compare fixed Moonbag exits with previously tested full-exit baseline
+        run: |
+          python -u moonbag_historical_replay.py \
+            --archive captured_prior_market_data/historical_ohlcv_source.json \
+            --max-pools 8 --bars 500 --output moonbag_retrospective_report.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("moonbag_retrospective_report.json").read_text())
+          assert r["using_previously_inspected_data"] is True
+          assert r["live_approved"] is False
+          assert r["profitability_validated"] is False
+          print("RETROSPECTIVE: this is exploratory on a previously inspected biased universe, NOT a fresh holdout.")
+          PY
+      - name: Archive all BUY/TP1/TP2/MOONBAG/STOP paper events and comparative net equity
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: moonbag-retrospective-no-live
+          path: moonbag_retrospective_report.json
+          if-no-files-found: warn
+          retention-days: 60
