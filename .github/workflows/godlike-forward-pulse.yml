@@ -95,6 +95,9 @@ jobs:
         if: always()
         run: python trench_funnel.py --db paper_forward.db --output forward_trench_funnel.json
 
+      - name: Reconcile PAPER order stages and failures (QUOTED is not BOUGHT)
+        if: always()
+        run: python paper_order_stage_audit.py --db paper_forward.db --output forward_order_stage_audit.json
       - name: Retain paper-only ledger, logs and reports for resumption
         if: always()
         uses: actions/upload-artifact@v4
@@ -111,6 +114,7 @@ jobs:
             forward_capacity_gate.json
             forward_funnel.json
             forward_trench_funnel.json
+            forward_order_stage_audit.json
             forward_reports/
           if-no-files-found: warn
           retention-days: 60
