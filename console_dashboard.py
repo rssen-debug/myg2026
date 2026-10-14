@@ -64,6 +64,8 @@ def frame(snapshot, width=118, height=38, color=True):
     pnl = report.get("net_pnl")
     pnl_style = "1;33" if pnl is None else "1;32" if Decimal(str(pnl)) > 0 else "1;31" if Decimal(str(pnl)) < 0 else "1;37"
     row(f"NETTO {money(pnl, True)}    REALISERAT {money(report.get('realized_pnl'), True)}    OREALISERAT {money(report.get('unrealized_pnl'), True)}", pnl_style)
+    if not report.get("total_trades") and not snapshot.get("positions"):
+        row("INGA TRADES: modellfriktion/likvidationsvarde av start-USDC/SOL ar inte handels-PnL.", "33")
     row(f"Start {money(report.get('initial_cash'))}   Kassa {money(report.get('cash'))}   Likvidationsmodell {money(report.get('total_port'))}   Order {money(snapshot.get('trade_budget_usd'))}")
     row(f"Avgifter {money(report.get('fees'))}   Avslutade {report.get('total_trades', 0)}   Win {percentage(report.get('win_rate'))}   PF {report.get('profit_factor') or '--'}   Max DD {percentage(report.get('max_drawdown_pct'))}")
     as_of = snapshot.get("report_as_of")
