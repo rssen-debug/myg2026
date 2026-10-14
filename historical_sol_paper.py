@@ -16,6 +16,10 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 import time
 
+# Capture only public HTTP JSON so a forward-independent researcher can rerun
+# exactly the same hypothetical trades. No wallet keys or private data.
+RAW_HTTP_SNAPSHOTS = {}
+
 BASE = "https://api.geckoterminal.com/api/v2"
 COST = {"trade_fee_pct": 0.003, "slippage_pct": 0.0075, "network_fee_usd_each_side": 0.25,
         "capital_usd": 100.0, "per_trade_usd": 20.0, "max_positions": 3,
@@ -25,7 +29,11 @@ MIN_BARS = 85
 def get_json(path, params=None, fetch=None):
     url = BASE + path + ("?" + urlencode(params) if params else "")
     if fetch is not None:
-        return fetch(url)
+        result = fetch(url)
+        if not isinstance(result,dict):
+            raise ValueError("Unexpected public API payload")
+        RAW_HTTP_SNAPSHOTS[url] = result
+        return result
     if not url.startswith(BASE + "/"):
         raise ValueError("Only GeckoTerminal public read API is allowed")
     last = None
@@ -37,11 +45,21 @@ def get_json(path, params=None, fetch=None):
                 data = r.read(5_000_001)
                 if len(data) > 5_000_000:
                     raise ValueError("Oversized market data")
-                return json.loads(data)
+                payload = json.loads(data)
+                if not isinstance(payload,dict):
+                    raise ValueError("Unexpected public API payload")
+                RAW_HTTP_SNAPSHOTS[url] = payload
+                return payload
         except (HTTPError,URLError,TimeoutError) as e:
             last=e
             if attempt < 2 and (not isinstance(e,HTTPError) or e.code in (429,500,502,503,504)):
-                time.sleep(2 ** attempt * 3)
+                # GitHub runners share public IPs. 429 is a rate limit, not an
+                # empty market. Never silently treat it as bad token data.
+                retry = 0
+                if isinstance(e,HTTPError) and e.code == 429:
+                    try: retry = int(e.headers.get("Retry-After","0"))
+                    except (TypeError,ValueError): retry = 0
+                time.sleep(min(75, max(retry, 30 if isinstance(e,HTTPError) and e.code==429 else 3*(attempt+1))))
                 continue
             break
     raise RuntimeError(f"Public OHLCV unavailable: {type(last).__name__}: {last}")
@@ -227,7 +245,11 @@ def run_strategy(pools, *, start=None,end=None,cost=COST):
 def conduct_research(fetch=None,max_pools=8,bar_limit=500):
     meta=discover_pools(fetch,max_pools=max_pools)
     pools=[];failures=[]
-    for m in meta:
+    for position,m in enumerate(meta):
+        # The free public feed has variable IP-based quotas. Space requests to
+        # avoid dropping most of the universe on an HTTP 429 response.
+        if fetch is None and position:
+            time.sleep(9)
         try:
             raw=get_json("/networks/solana/pools/"+m["pool"]+"/ohlcv/hour",
                          {"aggregate":1,"limit":bar_limit,"currency":"usd","token":"base"},fetch)
@@ -272,11 +294,27 @@ def main():
     p.add_argument("--max-pools",type=int,default=8)
     p.add_argument("--bars",type=int,default=500)
     p.add_argument("--output",default="historical_ohlcv_report.json")
+    p.add_argument("--source-output",default="historical_ohlcv_source.json")
+    p.add_argument("--source-input",help="Offline replay captured public JSON instead of refetching")
     args=p.parse_args()
     if not 1<=args.max_pools<=15 or not 100<=args.bars<=1000:
         p.error("max-pools 1..15; bars 100..1000")
-    report=conduct_research(max_pools=args.max_pools,bar_limit=args.bars)
     from pathlib import Path
+    fetch=None
+    if args.source_input:
+        archived=json.loads(Path(args.source_input).read_text(encoding="utf-8"))
+        if not isinstance(archived,dict) or not isinstance(archived.get("http_responses"),dict):
+            p.error("Invalid offline public API archive")
+        def fetch(url):
+            if url not in archived["http_responses"]:
+                raise ValueError(f"No archived public response for {url}")
+            return archived["http_responses"][url]
+    report=conduct_research(fetch=fetch,max_pools=args.max_pools,bar_limit=args.bars)
+    if not args.source_input:
+        Path(args.source_output).write_text(json.dumps({
+            "source":"GeckoTerminal public read-only API",
+            "fetched_at":report["data_fetched_at_utc"],
+            "http_responses":RAW_HTTP_SNAPSHOTS},sort_keys=True,allow_nan=False),encoding="utf-8")
     Path(args.output).write_text(json.dumps(report,indent=2,ensure_ascii=False,allow_nan=False),encoding="utf-8")
     for name in ("training","unmodified_holdout"):
         r=report[name]
