@@ -23,6 +23,7 @@ class TestQuotePreflightUsesTrueExecutableUnits(unittest.TestCase):
             SOL_MINT:{"price_usd":"200","observed_at":100}})
         broker.policy=SimpleNamespace(estimated_network_fee_lamports=3105000)
         broker.cfg={"TRADE_BUDGET_USD":D("20"),"BASE_SLIPPAGE_PCT":D("1")}
+        broker.slippage=100
         broker.ledger=SimpleNamespace(limits=SimpleNamespace(max_order_raw=20000000))
         broker._quote=quote
         broker._validate_target_route=Mock()
