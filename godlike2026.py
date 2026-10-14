@@ -1225,8 +1225,12 @@ class RugCheckValidator:
                     return False, f"{authority} är aktiv eller rapporten är motsägelsefull", {"danger": True}
 
             programs = [obj["tokenProgram"] for obj in (data, token) if "tokenProgram" in obj]
-            if not programs or any(p != self.CLASSIC_TOKEN_PROGRAM for p in programs):
-                return False, "Endast verifierat klassiskt SPL Token-program stöds; Token-2022/okänt program blockerat", {}
+            if not programs or any(not isinstance(p, str) or not p.strip() for p in programs):
+                return False, "Tokenprogram saknas i RugCheck-svaret; ingen handel tillåten", {}
+            if len(set(programs)) > 1:
+                return False, "RugCheck-svaret anger motsägelsefulla tokenprogram; ingen handel tillåten", {}
+            if programs[0] != self.CLASSIC_TOKEN_PROGRAM:
+                return False, "Verifierat icke-klassiskt tokenprogram (t.ex. Token-2022) blockeras", {}
             for obj in (data, token):
                 for field in ("token_extensions", "extensions"):
                     if obj.get(field) not in (None, {}, []):
