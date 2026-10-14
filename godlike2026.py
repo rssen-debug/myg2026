@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from public_http import get_public_json
 from rug_schema import verified_token_vaults
+from trench_evidence import assess_pair
 
 # Sätt Decimal-precision för finansiella beräkningar
 getcontext().prec = 50
@@ -892,7 +893,7 @@ class SmartWalletTracker:
         self.rpc_url = rpc_url
 
     def record_wallet_buy(self, wallet_address: str, mint: str, amount_sol: float = 1.0, tx_sig: str = ""):
-        """Registrering av bekräftad on-chain signal."""
+        """Record an UNVERIFIED external wallet observation, not a confirmed chain trade."""
         with self.state._get_connection() as conn:
             c = conn.cursor()
             c.execute("""
@@ -912,9 +913,11 @@ class SmartWalletTracker:
             WHERE s.mint = ? AND s.timestamp > ?
             """, (mint, cutoff))
             rows = c.fetchall()
-            labels = [r["label"] or r["wallet_address"][:8] for r in rows]
-            is_confluence = len(labels) >= 2
-            # Håller multiplikatorn strikt på 1.0x för att inte överträda budgetregler
+            labels = ["UNVERIFIED:" + (r["label"] or r["wallet_address"][:8]) for r in rows]
+            # A caller may insert arbitrary signals; even distinct wallets or
+            # supplied tx signatures are not proof of verified on-chain buys.
+            # Never silently promote these records into whale confluence.
+            is_confluence = False
             mult = 1.0
             return is_confluence, labels, mult
 
@@ -1314,54 +1317,23 @@ class RugCheckValidator:
 # ==============================================================================
 
 class TrenchIQAnalyzer:
-    def __init__(self):
-        self.hot_metas = ["ai", "agent", "robot", "cat", "dog", "pepe", "trump", "cult", "moon", "studio", "cupsey", "cup", "kimchi", "orangie", "spongebob"]
+    """Compatibility wrapper: no fabricated high-conviction 'AI' trench score.
 
-    def analyze(self, data: Dict[str, Any], confluence_info: Optional[Tuple[bool, List[str], float]] = None) -> Tuple[int, str]:
-        score = 50
-        bonuses = []
+    Promotional boosts, hot narratives and manually recorded wallet addresses
+    cannot establish authentic momentum, insider safety or buy permission.
+    """
 
-        if confluence_info and confluence_info[0]:
-            score += 25
-            bonuses.append(f"Whale Confluence ({len(confluence_info[1])} Wallets: {', '.join(confluence_info[1])})")
+    def inspect(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        return assess_pair(data)
 
-        socials = data.get("socials", [])
-        websites = data.get("websites", [])
-        has_twitter = any(s.get("type") == "twitter" for s in socials)
-        has_tg = any(s.get("type") == "telegram" for s in socials)
-
-        if has_twitter and (has_tg or websites):
-            score += 20
-            bonuses.append("Verifierade Socials")
-        elif not socials and not websites:
-            score -= 25
-
-        boosts = data.get("boosts", 0)
-        if boosts >= 5:
-            score += 15
-            bonuses.append(f"{boosts} Boosts")
-
-        buys = data.get("buys_h1", 0)
-        sells = data.get("sells_h1", 0)
-        if buys >= 25 and buys >= (sells * 1.8):
-            score += 15
-            bonuses.append(f"Köpöverskott ({buys}K/{sells}S)")
-
-        vol = dec(data.get("volume_h1", 0), ZERO)
-        if vol >= D("25000"):
-            score += 10
-            bonuses.append("Hög Volym (>$25k)")
-
-        sym_name = (data.get("symbol", "") + " " + data.get("name", "")).lower()
-        if any(m in sym_name for m in self.hot_metas):
-            score += 10
-            bonuses.append("Hett Narrativ")
-
-        score = max(0, min(100, score))
-        summary = f"Trench IQ: {score}/100"
-        if bonuses:
-            summary += f" | {', '.join(bonuses)}"
-        return score, summary
+    def analyze(self, data: Dict[str, Any],
+                confluence_info: Optional[Tuple[bool, List[str], float]] = None) -> Tuple[Optional[int], str]:
+        evidence = self.inspect(data)
+        flags = ", ".join(evidence["flags"]) if evidence["flags"] else "none from available aggregated fields"
+        # An integer score would misleadingly suggest a calibrated rug/alpha
+        # probability. Keep the original two-field API but return no score.
+        return None, (f"Trench telemetry: {evidence['label']}; flags: {flags}. "
+                      "Developer, bundles and on-chain wallet confluence NOT VERIFIED.")
 
 # ==============================================================================
 # ⚡ JUPITER LIVE ENGINE & ON-CHAIN BALANCE DELTA LOOP
@@ -1693,8 +1665,11 @@ class GodlikeBot:
         if not is_paper:
             return {"status": "BLOCKED", "reason": LIVE_BLOCK_REASON}
         pair = self.dex.get_token_data(mint)
+        # Persist observations about reported market flow for every decision,
+        # including rejection. Not an entry signal, rug score or safe-to-buy flag.
+        trench_evidence = assess_pair(pair)
         def finish(status, reason, **extra):
-            result = dict(status=status, reason=reason, **extra)
+            result = dict(status=status, reason=reason, trench_evidence=trench_evidence, **extra)
             with self.state._get_connection() as conn:
                 conn.execute("INSERT INTO market_observations(timestamp,mint,market_json,decision_json) VALUES(?,?,?,?)",
                              (time.time(), mint, json.dumps(pair, default=str), json.dumps(result, default=str)))
