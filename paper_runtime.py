@@ -84,6 +84,8 @@ class PaperSession:
         self.log_path = self.db_path.with_suffix(".log")
         self.counts = Counter()
         self.reasons = Counter()
+        self.trench_labels = Counter()
+        self.trench_flags = Counter()
         self.watchlist = []
         self.watch_index = 0
         self.evaluated_mints = set()
@@ -121,6 +123,7 @@ class PaperSession:
         with self.guard:
             self.snapshot.update(status=status, updated_at=utc_now(), report=report, report_as_of=report.get("valuation_as_of") or utc_now(),
                 positions=positions, decisions=dict(self.counts),
+                trench_labels=dict(self.trench_labels), trench_flags=dict(self.trench_flags.most_common(8)),
                 rejection_reasons=dict(self.reasons.most_common(6)), candidates=len(self.watchlist),
                 unique_evaluated=len(self.evaluated_mints), cycle_evaluated=self.cycle_evaluated,
                 cycle_seconds=round(self.cycle_seconds, 2), discovery=self.discovery_stats,
@@ -205,6 +208,14 @@ class PaperSession:
                     status = result.get("status", "ERROR")
                     reason = result.get("reason", "")
                     self.counts[status] += 1
+                    trench = result.get("trench_evidence")
+                    if isinstance(trench, dict):
+                        label = trench.get("label")
+                        if isinstance(label, str):
+                            self.trench_labels[label] += 1
+                        for flag in trench.get("flags", []):
+                            if isinstance(flag, str):
+                                self.trench_flags[flag] += 1
                     if status != "BOUGHT":
                         self.reasons[reason] += 1
                     cached = getattr(self.bot.dex, "_cache", {}).get(mint)
@@ -282,6 +293,11 @@ def render_dashboard(snapshot):
         lines.append("Kandidatflöden (överlapp kan finnas): " + str(source_counts))
         if discovery.get("errors"):
             lines.append("DELVIS KANDIDATDATA: " + str(discovery["errors"])[:240])
+    if snapshot.get("trench_labels"):
+        lines.append("TRENCH-OBSERVATIONER (EJ wallet/dev-verifiering eller köpsignal): " +
+                     str(snapshot["trench_labels"]))
+        if snapshot.get("trench_flags"):
+            lines.append("TRENCH-FLAGGOR: " + str(snapshot["trench_flags"]))
     if not report.get("total_trades") and not snapshot.get("positions"):
         lines.append("INGA TRADES: Nettoresultat ovan är en modellerad likvidationsvärdering av startportföljens USDC/SOL och eventuell konverteringsfriktion, INTE handelsvinst eller handelsförlust.")
     valuation_time = snapshot.get("report_as_of")
