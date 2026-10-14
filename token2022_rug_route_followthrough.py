@@ -13,7 +13,7 @@ from pathlib import Path
 from godlike2026 import RugCheckValidator
 from jupiter_roundtrip_20usd import target_pool_only
 from quote_provider import JupiterV2QuoteProvider, QuoteRequest
-from execution_engine import ExecutionPolicy, validate_execution_quote
+from execution_engine import ExecutionPolicy, SOL_MINT, validate_execution_quote
 from quote_broker import USDC
 
 CASES=(
@@ -62,10 +62,16 @@ def run(rug=None,provider=None):
             if not item["sell_route_matches_exact_rug_pool"]:
                 item["status"]="SELL_ROUTE_MISMATCH_NOT_EXECUTABLE"
                 continue
-            # Deliberate stress: min output, additional 50bps adverse margin,
-            # and modeled roundtrip 2*3.105m lamports at indicative SOL ~$150.
-            # This is NOT a verified $20 instantaneous roundtrip fill.
-            received=Decimal(sell.min_out_amount_raw)/Decimal(10**6)*Decimal("0.995")-Decimal("0.94")
+            # Model SOL network/rent fee against a fresh read-only quote.
+            # No assumed fixed SOL/USD value, no gratis SOL; failures leave
+            # economics unknown. Not an on-chain fill or refundable-rent proof.
+            sol_quote=provider.quote(QuoteRequest(SOL_MINT,USDC,1_000_000_000,100,
+                                        policy.quote_max_age_ms,policy.exclude_routers))
+            validate_execution_quote(sol_quote,policy,sol_quote.received_at)
+            sol_usd=Decimal(sol_quote.out_amount_raw)/Decimal(10**6)
+            fees=Decimal(3105000*2)/Decimal(10**9)*sol_usd
+            item["assumed_roundtrip_SOL_network_and_rent_cost_usd"]=str(fees)
+            received=Decimal(sell.min_out_amount_raw)/Decimal(10**6)*Decimal("0.995")-fees
             item["indicative_net_roundtrip_usd"]=str(received)
             item["indicative_loss_pct"] = str((Decimal(20)-received)/Decimal(20)*100)
             item["status"]="TWO_EXACT_POOL_READONLY_QUOTES_NO_ORDERS"
