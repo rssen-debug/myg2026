@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from public_http import get_public_json
 from rug_schema import verified_token_vaults
+from rug2022_report_schema import verified_metadata_only_report_shape
 from trench_evidence import assess_pair
 
 # Sätt Decimal-precision för finansiella beräkningar
@@ -1270,14 +1271,28 @@ class RugCheckValidator:
                     token2022_attestation.get("rug_safety_verified") is not False or
                     token2022_attestation.get("sellability_verified") is not False):
                     return False, "Verifierat icke-klassiskt tokenprogram (t.ex. Token-2022) blockeras", {}
+            onchain_metadata_only = (programs[0] == "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+                                     and self.cfg.get("TOKEN2022_METADATA_PAPER_EXPERIMENT") is True
+                                     and token2022_attestation is not None)
             for obj in (data, token):
                 for field in ("token_extensions", "extensions"):
-                    if obj.get(field) not in (None, {}, []):
-                        return False, "Token-extensions stöds inte av exekveringsmodellen", {}
+                    value = obj.get(field)
+                    if value not in (None, {}, []):
+                        # Never use a generic ignore_extensions switch. Only the
+                        # exact observed RugCheck metadata-only JSON is allowed,
+                        # and only after independently verified matching mint
+                        # owner, authorities, decimals and TLV extension types.
+                        if not (onchain_metadata_only and obj is data
+                                and field == "token_extensions"
+                                and verified_metadata_only_report_shape(value, expected_mint)):
+                            return False, "Okända eller riskabla Token-2022-tillägg; paperköp blockerat", {}
                 fee = obj.get("transferFee")
                 if fee not in (None, {}, []):
                     if not isinstance(fee, dict) or "pct" not in fee or dec(fee["pct"]) != ZERO:
                         return False, "Transferavgift saknas eller stöds inte", {}
+                    if onchain_metadata_only and (dec(fee.get("maxAmount", 0)) != ZERO
+                        or fee.get("authority") not in (None, "11111111111111111111111111111111")):
+                        return False, "Motsägelsefull Token-2022-avgiftsrapport", {}
 
             if "decimals" not in token or isinstance(token["decimals"], bool):
                 return False, "Exakta token-decimaler saknas", {}
