@@ -1,0 +1,42 @@
+name: GODLIKE short real-market PAPER smoke
+on:
+  push:
+    branches: [godlike2026-paper-audit]
+    paths: ['.github/workflows/godlike-paper-market-smoke.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-market-paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Exercise paper quotes with real public data only
+        shell: bash
+        run: |
+          set +e
+          timeout --signal=INT --kill-after=10s 160s python -u godlike2026.py --realtime --execution quote --duration 40 --cash 100 --trade-budget 20 --db paper_network_smoke.db --report-dir reports
+          rc=$?
+          echo "PAPER_REALTIMESMOKE_EXIT=$rc"
+          if [ "$rc" -ne 0 ]; then
+            echo "Paper session encountered an error, timed out, or was interrupted"
+            exit 1
+          fi
+      - name: Publish paper status and log; no actual orders
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godlike-paper-network-smoke
+          path: |
+            paper_network_smoke.status.json
+            paper_network_smoke.log
+            paper_network_smoke.runs.jsonl
+            reports/
+          if-no-files-found: warn
+          retention-days: 7
