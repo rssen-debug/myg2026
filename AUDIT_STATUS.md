@@ -16,6 +16,12 @@ This branch is an **isolated import of the 38-file public source** from [smr293/
 - Historical CSV replay is a **manually selected entry / exit-rule demonstration**, not a historical backtest of the token selection strategy.
 - Jupiter quote-based paper does not simulate chain inclusion, all failure fees, MEV, or real fills. **LIVE MUST REMAIN BLOCKED**.
 
+## Reproduced results on GitHub Actions, 2026-10-14
+- Offline CI: 39/39 tests passed after adding the paper-evidence evaluator; compile, LIVE-block check and **synthetic** replay also passed. See Actions workflow `GODLIKE paper-only verification`. Later UI-clarity tests may increase this count; always consult the latest CI logs.
+- Real-public-market bounded PAPER smoke: [run 38610322336](https://github.com/rssen-debug/myg2026/actions/runs/38610322336) completed in ~40 seconds without real orders. 160 distinct watched tokens, 409 rejected decisions, 11 waiting, **zero fills**. Major rejection reasons were low/missing liquidity and insufficient two-sided trading.
+- The paper liquidity-adjusted portfolio mark was $99.66 from $100, a modeled **-$0.34 portfolio liquidation-value change even with ZERO trades**; this is not a trading loss or trading edge. Both dashboards now disclose this upfront. The session does not establish profitability.
+- New `paper_profit_gate.py` reads a local paper SQLite database in read-only mode and reports 30-day coverage, closed positions, modeled net results, and drawdown. The gate **always remains NOT_READY** until independently verified out-of-sample and live-execution calibration are implemented. It never authorizes live.
+
 ## Release decision
 - **Source review:** in progress.
 - **Offline regression smoke:** automated in this branch; inspect GitHub Actions for the actual status.
