@@ -1,0 +1,31 @@
+name: GODLIKE public RugCheck Token2022 extension schema
+on:
+  push:
+    branches: [godlike2026-paper-audit]
+    paths:
+      - 'rug_extension_shape_probe.py'
+      - '.github/workflows/godlike-rug-extension-schema.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Inspect public RugCheck extensions on three prior PAPER candidates
+        run: python -u rug_extension_shape_probe.py
+      - name: Archive public extension representation for exact allowlist tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godlike-rug-token2022-extension-shape-no-trading
+          path: rug_extensions_public_shape.json
+          if-no-files-found: warn
+          retention-days: 14
