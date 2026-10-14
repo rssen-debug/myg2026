@@ -185,6 +185,7 @@ def run_strategy(pools, *, start=None,end=None,cost=COST):
             del open_positions[pool]
 
         # Entry at OPEN of the new bar; ALL signals depend on prior closed bars.
+        new_entry_pools=[]
         if cash>=cost["per_trade_usd"] and len(open_positions)<cost["max_positions"]:
             eligible=[]
             for asset in pools:
@@ -207,6 +208,29 @@ def run_strategy(pools, *, start=None,end=None,cost=COST):
                 cash-=spent
                 open_positions[pool]={"quantity":qty,"spent":spent,"entry_price":bar["o"],
                                       "entry_ts":ts,"entry_idx":idx,"name":asset["name"]}
+                new_entry_pools.append((pool,bar))
+        # Entries occur at the opening print. A same-hour low can then hit
+        # the stop BEFORE the next hour. Never pretend the position survived
+        # that bar. Process all OPEN buys first: intrabar exits may not fund
+        # additional entries at the same historical opening price.
+        for pool,bar in new_entry_pools:
+            position=open_positions.get(pool)
+            if position is None:continue
+            stop=position["entry_price"]*.86
+            take=position["entry_price"]*1.30
+            if bar["l"]<=stop:
+                px,why=stop,"ENTRY_BAR_STOP"
+            elif bar["h"]>=take:
+                px,why=take,"ENTRY_BAR_TAKE_PROFIT"
+            else:
+                continue
+            received=simulate_exit(px,position["quantity"],cost)
+            cash+=received
+            trades.append({"pool":pool,"name":position["name"],"entry_ts":ts,
+                           "exit_ts":ts,"entry_usd":position["spent"],"exit_usd":round(received,6),
+                           "net_pnl_usd":round(received-position["spent"],6),
+                           "reason":why,"hours_held":0.0})
+            del open_positions[pool]
         liquidation=cash
         for pool,pos in open_positions.items():
             asset=next(a for a in pools if a["pool"]==pool)
