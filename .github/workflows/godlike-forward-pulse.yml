@@ -1,0 +1,93 @@
+name: GODLIKE intermittent PAPER research pulse
+
+# This is NOT continuous trading or a profitability/live-readiness certificate.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/godlike-forward-pulse.yml'
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: godlike-forward-pulse
+  cancel-in-progress: false
+
+jobs:
+  paper-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout isolated trading audit branch
+        uses: actions/checkout@v4
+        with:
+          ref: godlike2026-paper-audit
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pinned dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Restore prior observed PAPER state safely
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .github/scripts/restore_paper_state.py
+
+      - name: Run bounded real-market quotes as PAPER only, never broadcast
+        shell: bash
+        run: |
+          set +e
+          timeout --signal=INT --kill-after=20s 420s python -u godlike2026.py \
+            --realtime --execution quote --duration 240 --cash 100 \
+            --trade-budget 20 --db paper_forward.db --report-dir forward_reports
+          rc=$?
+          set -e
+          echo "PAPER_EXIT=$rc"
+          if [ "$rc" -ne 0 ]; then
+            echo "The PAPER runtime did not finish cleanly; preserving all evidence."
+            exit 1
+          fi
+
+      - name: Publish honest NOT_READY audit from accumulated paper data
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          python paper_profit_gate.py --db paper_forward.db --output forward_profit_gate.json
+          profit_rc=$?
+          python capital_capacity_gate.py --aum-usd 10000000 --output forward_capacity_gate.json
+          capacity_rc=$?
+          set -e
+          echo "PROFIT_GATE_EXPECTED_NOT_READY=$profit_rc"
+          echo "CAPACITY_GATE_EXPECTED_NOT_READY=$capacity_rc"
+          if [ "$profit_rc" -ne 2 ] || [ "$capacity_rc" -ne 2 ]; then
+            echo "Gate failed unexpectedly, not treating this as financial success."
+            exit 1
+          fi
+
+      - name: Retain paper-only ledger, logs and reports for resumption
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godlike-forward-state
+          path: |
+            paper_forward.db
+            paper_forward.status.json
+            paper_forward.settings.json
+            paper_forward.log
+            paper_forward.runs.jsonl
+            forward_pulse_runs.jsonl
+            forward_profit_gate.json
+            forward_capacity_gate.json
+            forward_reports/
+          if-no-files-found: warn
+          retention-days: 60
+          overwrite: true
