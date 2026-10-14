@@ -50,3 +50,28 @@ py -3 paper_profit_gate.py --db paper_forward.db --output forward_profit_gate.js
 ```
 
 Sista grinden returnerar normalt `NOT_READY` och avslutar med kod 2 tills independent out-of-sample och tillräcklig market forward-evidence finns.
+
+
+## Nätverkstest av ordinarie paperbot (4 minuter)
+
+GitHub Actions körning [38624984183](https://github.com/rssen-debug/myg2026/actions/runs/38624984183)
+gällde en version **före den senare prioriterade signal-återkontrollen**.
+
+- 284 unika Solana-tokenkandidater utvärderades; 2 340 upprepade beslut registrerades.
+- `REJECTED=2274`, `WAITING=35` (18 unika tokens), `RUG_PREVENTED=31` (7 unika tokens).
+- 0 simulerade köp och 0 avslutade affärer. Det finns **ingen** handelsvinst att rapportera.
+- Största avslagsorsakerna: låg/ogiltig konservativ likviditet (1 450 observationer, 203 tokens);
+  marknadsdata saknas (307/44); otillräcklig tvåsidig handel (302/28).
+- Trench-funneln läste alla 2 340 beslut, inga felaktiga buy-/wallet-godkännanden. Den visade bland annat
+  42 unika tokens med observerbar risk och 207 med ofullständiga uppgifter. Kategorier per token kan överlappa
+  eftersom nya observationer ändrar klassificeringen.
+- Ett `gecko_new_pools`-anrop fick HTTP 429; detta förblir uttryckligt `PARTIAL` istället för att utge sig för att vara komplett marknadstäckning.
+- Paperportföljen låg kring $99,65 jämfört med $100 startkapital på grund av modellerad konverterings-/
+  likvidationsfriktion, inte avslutade handelsförluster.
+- SQLite och `actual_money_used=false` verifierades.
+
+Efter testet har `paper_runtime.choose_candidate_batch` ändrats för att prioritera några tidigare
+marknadskvalificerade kandidater inom 180 sekunder, utan att svälta övriga tokens.
+Funktionen är regressionsprovad men dess påverkan på **verklig** paperfillfrekvens är ännu inte uppmätt.
+Ingen riskgräns har sänkts för att framtvinga order.
+
