@@ -1,0 +1,81 @@
+name: GODLIKE opt-in verified Token-2022 PAPER market trial
+on:
+  push:
+    branches: [godlike2026-paper-audit]
+    paths: ['.github/workflows/godlike-token2022-paper-market-trial.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  strictly-paper-no-wallet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install existing pinned dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Verify specific opt-in Token-2022 risk and main scanner tests
+        run: python -m unittest -v test_token2022_optin_paper test_token2022_onchain_inspector test_actual_scanner_entry
+      - name: Observe exact pool and independent metadata-only Token-2022 mints; PAPER quotes only
+        shell: bash
+        run: |
+          set +e
+          timeout --signal=INT --kill-after=20s 440s python -u godlike2026.py \
+            --realtime --execution quote --token2022-metadata-paper-experiment \
+            --duration 330 --cash 100 --trade-budget 20 \
+            --db token2022_metadata_experiment.db --report-dir token2022_paper_reports
+          rc=$?
+          set -e
+          echo "TOKEN2022_PAPER_EXIT=$rc"
+          if [ "$rc" -ne 0 ]; then
+            echo "Paper run failed. No unverified entry or live fallback is permitted."
+            exit 1
+          fi
+      - name: Report exact candidate funnel and net modeled closed positions
+        if: always()
+        shell: bash
+        run: |
+          python paper_funnel.py --db token2022_metadata_experiment.db --output t2022_paper_funnel.json
+          python trench_funnel.py --db token2022_metadata_experiment.db --output t2022_trench_report.json
+          set +e
+          python paper_profit_gate.py --db token2022_metadata_experiment.db --output t2022_profit_audit.json
+          rc=$?
+          set -e
+          if [ "$rc" -ne 2 ]; then
+            echo "Unexpected capital/profit gate status: $rc"; exit 1
+          fi
+      - name: Verify no funds, no wallet credentials, and SQLite integrity
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json,sqlite3
+          from pathlib import Path
+          status=json.loads(Path("token2022_metadata_experiment.status.json").read_text())
+          assert status["mode"]=="PAPER_REAL_MARKET"
+          assert status["actual_money_used"] is False
+          db="file:token2022_metadata_experiment.db?mode=ro"
+          with sqlite3.connect(db,uri=True) as con:
+              assert con.execute("PRAGMA quick_check").fetchone()[0]=="ok"
+          print("All orders are simulated. NO live adapter or wallet keys used.")
+          PY
+      - name: Archive strict paper evidence including denied mint/program/pool/quote stages
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: token2022-opt-in-paper-trial-no-funds
+          path: |
+            token2022_metadata_experiment.db
+            token2022_metadata_experiment.settings.json
+            token2022_metadata_experiment.status.json
+            token2022_metadata_experiment.log
+            token2022_metadata_experiment.runs.jsonl
+            t2022_paper_funnel.json
+            t2022_trench_report.json
+            t2022_profit_audit.json
+            token2022_paper_reports/
+          if-no-files-found: warn
+          retention-days: 30
