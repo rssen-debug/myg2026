@@ -180,6 +180,46 @@ def inspect_mints(mints, rpc=None):
     return result
 
 
+
+def attest_metadata_only_for_paper(mint, expected_decimals, *, rpc=None):
+    """Independent mint account precondition, NOT rug or sellability approval.
+
+    Only for an *explicitly* enabled paper RESEARCH experiment. Even a pass
+    must still pass the complete RugCheck holder/LP/rug scoring, exact target
+    pool, fresh two-way Jupiter quotes, and all separate order controls.
+    """
+    if not valid_mint(mint) or isinstance(expected_decimals,bool) or not isinstance(expected_decimals,int):
+        return None, "Invalid mint or verified decimals"
+    if not 0<=expected_decimals<=18:
+        return None, "Unsupported token decimals"
+    report=inspect_mints([mint],rpc=rpc)
+    if report["errors"] or len(report["records"])!=1:
+        return None, "Independent on-chain mint RPC unavailable; fail closed"
+    proof=report["records"][0]
+    if (proof.get("status")!="STRUCTURE_PARSED_NOT_TRADE_APPROVED" or
+            proof.get("onchain_program")!="TOKEN_2022" or
+            proof.get("mint")!=mint or proof.get("decimals")!=expected_decimals or
+            proof.get("mint_authority_enabled") is not False or
+            proof.get("freeze_authority_enabled") is not False or
+            proof.get("risk_flags") or
+            set(proof.get("extensions",[]))!={"MetadataPointer","TokenMetadata"} or
+            proof.get("unknown_extension_types") or
+            proof.get("observed_rpc_slot") is None):
+        return None, "Token-2022 mint program, extensions, authorities or decimals not independently validated"
+    evidence={
+        "mint":mint,
+        "token_program":TOKEN_2022_PROGRAM,
+        "extensions":["MetadataPointer","TokenMetadata"],
+        "decimals":expected_decimals,
+        "onchain_slot":proof["observed_rpc_slot"],
+        "purpose":"PAPER_MINT_INSPECTION_ONLY",
+        "rug_safety_verified":False,
+        "sellability_verified":False,
+        "live_approved":False,
+    }
+    return evidence, "Independent metadata-only Token-2022 mint structure observed; full pool and sell checks still required"
+
+
 def main():
     p=argparse.ArgumentParser(description="Research-only on-chain Token-2022 mint extension survey. NO TRADES.")
     p.add_argument("--input",required=True,help="JSON report from the strict market/Rug survey")
