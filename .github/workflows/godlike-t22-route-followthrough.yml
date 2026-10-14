@@ -1,0 +1,33 @@
+name: GODLIKE read-only T22 full RugCheck and exact Jupiter pool routes
+on:
+  push:
+    branches: [godlike2026-paper-audit]
+    paths:
+      - 'token2022_rug_route_followthrough.py'
+      - '.github/workflows/godlike-t22-route-followthrough.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  no-orders:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install exact paper dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Check strict metadata extension schema regressions
+        run: python -m unittest -v test_rug2022_report_schema test_token2022_optin_paper
+      - name: Inspect 3 previously denied on-chain metadata-only Token2022 mints and Jupiter read-only pool quotes
+        run: python -u token2022_rug_route_followthrough.py
+      - name: Save exact read-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godlike-t22-risk-and-quote-route-no-orders
+          path: t2022_readonly_followthrough.json
+          if-no-files-found: warn
+          retention-days: 30
