@@ -23,7 +23,10 @@ def evaluate(db_path, min_days=30, min_closed=200):
     path = Path(db_path).expanduser().resolve()
     result = {"database": str(path), "mode":"PAPER_EVALUATION_ONLY",
               "live_approved":False, "profitability_validated":False,
-              "paper_days_observed":0, "paper_closed_positions":0,
+              "paper_days_observed":0, "paper_days_with_substantial_coverage":0,
+              "paper_min_covered_minutes_per_day":None,
+              "paper_closed_positions":0, "paper_winning_closed_positions":0,
+              "paper_mean_net_per_closed_position_usd":None,
               "paper_realized_net_usd":None, "paper_max_drawdown_pct":None,
               "out_of_sample_validated":False, "status":"NOT_READY", "reasons":[]}
     if min_days <= 0 or min_closed <= 0:
@@ -41,6 +44,19 @@ def evaluate(db_path, min_days=30, min_closed=200):
             days = [row[0] for row in con.execute(
                 "SELECT DISTINCT CAST(timestamp / 86400 AS INTEGER) FROM market_observations ORDER BY 1")]
             result["paper_days_observed"] = len(days)
+            # A handful of quote polls on each calendar day is NOT full-day
+            # forward coverage. Require at least 12h of distinct observed
+            # UTC minutes per day as a conservative minimum diagnostic.
+            coverages = [int(row[0]) for row in con.execute(
+                "SELECT COUNT(DISTINCT CAST(timestamp / 60 AS INTEGER)) "
+                "FROM market_observations GROUP BY CAST(timestamp / 86400 AS INTEGER)")]
+            substantial_days = sum(minutes >= 720 for minutes in coverages)
+            result["paper_days_with_substantial_coverage"] = substantial_days
+            result["paper_min_covered_minutes_per_day"] = min(coverages) if coverages else None
+            if substantial_days < min_days:
+                result["reasons"].append(
+                    f"Only {substantial_days} of required {min_days} days contain at least 720 distinct observed minutes; "
+                    "brief scheduled GitHub runs are not continuous forward testing")
             if len(days) < min_days:
                 result["reasons"].append(f"Observed only {len(days)} of required {min_days} UTC paper days")
             if days and days[-1] - days[0] + 1 != len(days):
@@ -55,9 +71,15 @@ def evaluate(db_path, min_days=30, min_closed=200):
                                    "WHERE is_paper=1 AND action IN ('TP1','TP2')"):
                 partial[row[0]] = partial.get(row[0], Decimal(0)) + number(row[1])
             pnl = Decimal(0)
+            winning = 0
             for pos in positions:
-                pnl += number(pos["net_usd_received"]) + partial.get(pos["id"],Decimal(0)) - number(pos["usd_invested"])
+                trade_net = number(pos["net_usd_received"]) + partial.get(pos["id"], Decimal(0)) - number(pos["usd_invested"])
+                pnl += trade_net
+                winning += trade_net > 0
             result["paper_realized_net_usd"] = str(pnl)
+            result["paper_winning_closed_positions"] = winning
+            if positions:
+                result["paper_mean_net_per_closed_position_usd"] = str(pnl / len(positions))
             if pnl <= 0:
                 result["reasons"].append("Closed paper trades have no positive modeled net PnL")
             equity_rows = con.execute("SELECT equity_usd, complete FROM equity_history ORDER BY timestamp, id").fetchall()
