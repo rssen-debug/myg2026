@@ -58,6 +58,19 @@ class TestHistoricalSolPaper(unittest.TestCase):
         self.assertEqual(matching[0]["reason"],"STOP")
         self.assertLess(matching[0]["net_pnl_usd"],0)
 
+    def test_entry_bar_stop_is_recognized_not_ignored(self):
+        asset={"pool":"pool-one","name":"Test","bars":rising_bars()}
+        entry_index=26
+        entry=asset["bars"][entry_index]
+        entry["l"]=entry["o"]*0.65
+        # Prior hourly closes remain unchanged, so the signal is still valid.
+        report=run_strategy([asset])
+        first=[t for t in report["trades"] if t["entry_ts"]==entry["ts"]]
+        self.assertTrue(first)
+        self.assertEqual(first[0]["exit_ts"],entry["ts"])
+        self.assertEqual(first[0]["reason"],"ENTRY_BAR_STOP")
+        self.assertLess(first[0]["net_pnl_usd"],0)
+
     def test_order_size_cannot_exceed_previous_bar_volume_cap(self):
         bars=rising_bars()
         for bar in bars:bar["v"]=1000
