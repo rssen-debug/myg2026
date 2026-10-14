@@ -1,0 +1,55 @@
+name: GODLIKE Token-2022 on-chain extension research only
+on:
+  push:
+    branches: [godlike2026-paper-audit]
+    paths:
+      - 'token2022_onchain_inspector.py'
+      - 'test_token2022_onchain_inspector.py'
+      - '.github/workflows/godlike-token2022-readonly-inspector.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  token2022-risk-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned runtime dependencies for RPC TLS and public token reads
+        run: python -m pip install -r requirements.txt
+      - name: Verify raw mint/authority/TLV parser fail-closed and no trading
+        run: python -m unittest -v test_token2022_onchain_inspector
+      - name: Restore PREVIOUS live market-to-RugCheck candidate evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: godlike-strict-market-rugcheck-funnel
+          run-id: 38630021001
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: source_market_rug_evidence
+      - name: Survey independent on-chain mint owners and Token-2022 extension types; no execution
+        run: |
+          python token2022_onchain_inspector.py \
+            --input source_market_rug_evidence/market_rug_candidate_diagnostic.json \
+            --output token2022_onchain_report.json
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          r=json.loads(Path("token2022_onchain_report.json").read_text())
+          assert r["actual_money_used"] is False
+          assert r["live_approved"] is False
+          if "records" in r:
+              assert not any(x.get("trading_approval") for x in r["records"])
+          print("No mint approved for execution; observed extension data is research only.")
+          PY
+      - name: Archive non-sensitive read-only mint program evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godlike-onchain-token2022-risk-survey-no-orders
+          path: token2022_onchain_report.json
+          if-no-files-found: warn
+          retention-days: 30
