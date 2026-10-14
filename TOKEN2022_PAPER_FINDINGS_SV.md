@@ -39,3 +39,14 @@ Flaggan **är inte påslagen i vanliga paperflödet**, och ska inte användas f�
 - Tidigare historical OHLCV-replays gav starkt negativa resultat på ett selektionsbiasat redan sett urval. Inga ytterligare fittade parameterförsök på den perioden får kallas oberoende out-of-sample.
 
 **Fullmålet "garanterat profitabel" kan inte ges och är inte uppnått.**
+
+
+## Uppföljning: report-only Token-2022-schema och exakt köp-/säljpool
+
+- Fullt paperexperiment före report-schemafixen: [38631333178](https://github.com/rssen-debug/myg2026/actions/runs/38631333178), 322 unika tokens, 2 400 bedömningar, **0 simulerade köp**, **0 avslutade order**. Även där flaggade 79 utvärderingar / 8 unika tokens på grund av `token_extensions` som den tidigare generiska regeln inte kunde tolka.
+- Offentliga RugCheck-extensionstrukturer från tre av dessa token visade `token_extensions` med **MetadataPointer** och **TokenMetadata**, medan transferHook, permanentDelegate, transferFeeConfig, nonTransferable, pausable med flera specifika riskfält var null/false. Läsprov: [38632410904](https://github.com/rssen-debug/myg2026/actions/runs/38632410904).
+- `rug2022_report_schema.py` validerar **exakt de fältnamn som RugCheck returnerade** och matchar metadata-mint/adress mot den oberoende på kedjan observerade minten. Okända/nya nycklar, aktiv transfer hook, transferFeeConfig, metadata-auktoritet eller extra metadata avvisas. Den är endast aktiv tillsammans med opt-in **paper** och färsk on-chain attestering; standard/live är fortsatt spärrad.
+- Read-only followthrough med tre förvalda tidigare blockerade mints: [38632911282](https://github.com/rssen-debug/myg2026/actions/runs/38632911282). Alla tre passerade därefter hela RugCheck-rapportfiltret **men detta betyder inte säljbarhet**. HUMPH hade matchande köprutt men en overifierad mellanliggande mint i säljrutten; SEALS hade overifierad mellanliggande mint redan i köprutten; CRAWLER fick ett offertrelaterat fel. **Ingen bör köpas på dessa offerter.**
+- Nytt isolerat paperexperiment efter report-schemaändringen: [38633096342](https://github.com/rssen-debug/myg2026/actions/runs/38633096342). Även där krävs tidssärskilda signalkrav, hela RugCheck, on-chain extensiongranskning, exakt Jupiter-rutt för kontrollerad pool och konservativ försäljningskontroll. Håll slutsatsen NOT_READY tills orderbokföringen verifierat verkligt citerade, simulerade BUY+SELL efter avgifter.
+
+**Token-2022-metadata-only på kedjan är inte en universell säkerhetsklassning.** Ingen ska släppa på pool-/ruttkraven för att få artificiella affärer.
