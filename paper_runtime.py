@@ -28,6 +28,31 @@ def atomic_json(path, value):
     temporary.replace(target)
 
 
+def verify_resume_settings(previous, expected):
+    """Permit ONLY documented legacy-FALSE flag migration with signed settings.
+
+    A prior session predating the Token-2022 research flag is logically
+    equivalent to False, but True must never silently reuse that database.
+    Every other risk, cost, bankroll, execution and strategy field must match.
+    """
+    if (not isinstance(previous, dict) or
+            not isinstance(previous.get("settings"), dict) or
+            not isinstance(previous.get("sha256"), str)):
+        raise ValueError("Sparad paperkonfiguration saknar verifierbar hash")
+    saved = previous["settings"]
+    saved_hash = hashlib.sha256(json.dumps(saved, sort_keys=True).encode()).hexdigest()
+    if previous["sha256"] != saved_hash:
+        raise ValueError("Sparad paperkonfiguration har ändrats eller skadats")
+    if saved == expected:
+        return "UNCHANGED"
+    legacy = dict(expected)
+    legacy.pop("TOKEN2022_METADATA_PAPER_EXPERIMENT", None)
+    if (saved == legacy and
+            expected.get("TOKEN2022_METADATA_PAPER_EXPERIMENT") == "False"):
+        return "LEGACY_TOKEN2022_DISABLED_MIGRATION"
+    raise ValueError("Inställningar skiljer sig från sparad körning. Välj en ny --db för ett nytt experiment.")
+
+
 class SessionLock:
     """OS releases this lock even if the terminal/process crashes."""
     def __init__(self, db_path):
@@ -178,11 +203,15 @@ class PaperSession:
         settings = {k: str(self.bot.cfg[k]) for k in sorted(set(keys)) if k in self.bot.cfg}
         settings["INITIAL_CASH_USD"] = str(self.bot.state.get_wallet()["initial_cash_usd"])
         settings_path = self.db_path.with_suffix(".settings.json")
+        migration = "NEW_SESSION"
+        previous = None
         if settings_path.exists():
             previous = json.loads(settings_path.read_text(encoding="utf-8"))
-            if previous.get("settings") != settings:
-                raise ValueError("Inställningar skiljer sig från sparad körning. Välj en ny --db för ett nytt experiment.")
+            migration = verify_resume_settings(previous, settings)
         payload = {"settings": settings, "sha256": hashlib.sha256(json.dumps(settings, sort_keys=True).encode()).hexdigest()}
+        if migration == "LEGACY_TOKEN2022_DISABLED_MIGRATION":
+            payload["migrated_from_sha256"] = previous["sha256"]
+            payload["migration"] = migration
         atomic_json(settings_path, payload)
         source_root = Path(__file__).resolve().parent
         code_hashes = {name: hashlib.sha256((source_root / name).read_bytes()).hexdigest()
