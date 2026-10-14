@@ -22,11 +22,25 @@ jobs:
         run: python -m unittest -v test_historical_sol_paper
       - name: Download real public Solana pool candles and simulate full BUY/SELL history
         run: python -u historical_sol_paper.py --max-pools 8 --bars 500 --output historical_ohlcv_report.json
+      - name: Reproduce identical hypothetical trades from archived public responses
+        run: |
+          python historical_sol_paper.py --source-input historical_ohlcv_source.json --max-pools 8 --bars 500 --output historical_ohlcv_replay.json
+          python - <<'PY'
+          import json
+          original=json.load(open("historical_ohlcv_report.json"))
+          replay=json.load(open("historical_ohlcv_replay.json"))
+          for period in ("training","unmodified_holdout"):
+              assert original[period] == replay[period], f"{period}: non-reproducible historical paper trades"
+          print("Exact historical paper trades reproduced from archived public market data.")
+          PY
       - name: Preserve actual public market evidence and results regardless of outcome
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: actual-solana-ohlcv-paper-backtest
-          path: historical_ohlcv_report.json
+          path: |
+            historical_ohlcv_report.json
+            historical_ohlcv_source.json
+            historical_ohlcv_replay.json
           if-no-files-found: warn
           retention-days: 60
