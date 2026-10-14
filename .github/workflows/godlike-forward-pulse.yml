@@ -88,6 +88,10 @@ jobs:
         if: always()
         run: python paper_funnel.py --db paper_forward.db --output forward_funnel.json
 
+      - name: Publish trench evidence audit (aggregated market flow only; no whale/developer verification)
+        if: always()
+        run: python trench_funnel.py --db paper_forward.db --output forward_trench_funnel.json
+
       - name: Retain paper-only ledger, logs and reports for resumption
         if: always()
         uses: actions/upload-artifact@v4
@@ -103,6 +107,7 @@ jobs:
             forward_profit_gate.json
             forward_capacity_gate.json
             forward_funnel.json
+            forward_trench_funnel.json
             forward_reports/
           if-no-files-found: warn
           retention-days: 60
