@@ -3,6 +3,7 @@
 Strict target pool, independent initial/engine quotes, and reversed SELL
 quantity are still checked. The test does not fabricate a successful fill.
 """
+from contextlib import contextmanager
 from decimal import Decimal as D
 from types import SimpleNamespace
 import unittest
@@ -95,6 +96,64 @@ class TestQuotePreflightUsesTrueExecutableUnits(unittest.TestCase):
         self.assertEqual(response["status"],"REJECTED")
         self.assertIn("SELL_ROUTE_OTHER_POOL",response["reason"])
         broker.engine.execute.assert_not_called()
+
+
+class TestMainQuoteMarketDriftDiagnostics(unittest.TestCase):
+    def broker(self,*,market_price="1",liquidity="100000"):
+        b=QuoteBroker.__new__(QuoteBroker)
+        b.clock=lambda:1000.
+        b.cfg={
+            "TRADE_BUDGET_USD":D("20"),"BASE_SLIPPAGE_PCT":D("1"),
+            "MAX_MARKET_DATA_AGE_SECONDS":30,"MIN_LIQUIDITY_USD":D("15000"),
+        }
+        b.policy=SimpleNamespace(estimated_network_fee_lamports=3105000)
+        fx={USDC:{"price_usd":"1"},SOL_MINT:{"price_usd":"100"}}
+        b._check_fx=lambda prior:None
+        b._fx=lambda:fx
+        b.entry_allowed=lambda:True
+        b.state=SimpleNamespace(can_open_position=lambda *args,**kwargs:(True,"OK"))
+        b.bot=SimpleNamespace(dex=SimpleNamespace(get_pair_data=lambda mint,pool:{
+            "pair_address":pool, "observed_at":999,
+            "liquidity_usd":liquidity,"price_usd":market_price}))
+        context={
+            "mint":MINT,"pair_address":"verified-pool",
+            "fx":fx,"liquidity_cap_usd":"100000",
+            "observed_liquidity_usd":"100000",
+            "signal_price_usd":"1",
+            "security_checked_at":999,
+            "sell_probe":{"received_at":999},
+            "sell_probe_raw":5000000,
+        }
+        b._context=lambda *args:context
+        class DB:
+            def execute(self,*args):
+                return SimpleNamespace(fetchone=lambda:{"id":"mock-paper-order"})
+        @contextmanager
+        def connection():
+            yield DB()
+        b.store=SimpleNamespace(_connection=connection)
+        intent=SimpleNamespace(idempotency_key="test-paper",
+                               side="BUY",amount_raw=19000000)
+        return b,intent
+
+    def test_over_one_percent_price_jump_rejects_without_relaxing_threshold(self):
+        b,intent=self.broker(market_price="1.011")
+        result=b._market_risk(intent,None)
+        self.assertFalse(result["allowed"])
+        self.assertIn("1.10%",result["reason"])
+        self.assertIn("gräns 1%",result["reason"])
+
+    def test_more_than_ten_percent_pool_liquidity_drop_rejects(self):
+        b,intent=self.broker(liquidity="89999")
+        result=b._market_risk(intent,None)
+        self.assertFalse(result["allowed"])
+        self.assertIn("likviditet föll över 10%",result["reason"])
+
+    def test_fluctuations_inside_original_limits_still_pass_this_market_guard(self):
+        b,intent=self.broker(market_price="1.009",liquidity="90000")
+        result=b._market_risk(intent,None)
+        self.assertTrue(result["allowed"])
+
 
 
 if __name__=="__main__":
