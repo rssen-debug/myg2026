@@ -1,0 +1,34 @@
+name: GODLIKE live public market-to-RugCheck funnel (read only)
+on:
+  push:
+    branches: [godlike2026-paper-audit]
+    paths:
+      - 'pre_entry_liquidity_rug_survey.py'
+      - 'test_pre_entry_liquidity_rug_survey.py'
+      - '.github/workflows/godlike-market-rug-survey.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  strict-read-only-pre-entry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install existing pinned research dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Reproduce exact market and Rug preconditions on synthetic test fixtures (NO ORDERS)
+        run: python -m unittest -v test_pre_entry_liquidity_rug_survey
+      - name: Survey actual fresh Solana candidate pools and RugCheck reports without trading
+        run: python -u pre_entry_liquidity_rug_survey.py --inspect 180 --rug-probes 12
+      - name: Preserve read-only token/market rejection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godlike-strict-market-rugcheck-funnel
+          path: market_rug_candidate_diagnostic.json
+          if-no-files-found: warn
+          retention-days: 30
