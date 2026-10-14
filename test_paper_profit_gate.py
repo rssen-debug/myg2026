@@ -63,6 +63,22 @@ class TestPaperProfitGate(unittest.TestCase):
         r = evaluate(self.db)
         self.assertIsNone(r["paper_max_drawdown_pct"])
         self.assertIn("Incomplete", " ".join(r["reasons"]))
+    def test_fee_reserve_only_supports_three_roundtrips(self):
+        self.schema()
+        with sqlite3.connect(self.db) as c:
+            c.execute("CREATE TABLE execution_funding_evidence (id INTEGER, evidence_json TEXT)")
+            c.execute("CREATE TABLE execution_balances (mode TEXT, asset TEXT, raw_amount TEXT)")
+            c.execute("INSERT INTO execution_funding_evidence VALUES (1,?)",
+                      ('{"policy":{"estimated_network_fee_lamports":3105000}}',))
+            c.execute("INSERT INTO execution_balances VALUES (?,?,?)",
+                      ("PAPER","native:SOL","19218572"))
+        r = evaluate(self.db)
+        self.assertEqual(r["paper_native_sol_balance_lamports"],19218572)
+        self.assertEqual(r["paper_modeled_fee_per_fill_lamports"],3105000)
+        self.assertEqual(r["paper_remaining_minimal_buy_sell_roundtrips"],3)
+        self.assertIn("cannot be achieved", " ".join(r["reasons"]))
+        self.assertFalse(r["live_approved"])
+
     def test_gap_day_detected(self):
         self.schema()
         with sqlite3.connect(self.db) as c:
