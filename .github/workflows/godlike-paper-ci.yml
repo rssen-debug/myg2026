@@ -1,0 +1,37 @@
+name: GODLIKE paper-only verification
+on:
+  push:
+    branches: [godlike2026-paper-audit]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safety-and-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: Compile imported Python files
+        run: python -m compileall -q .
+      - name: Run actual checked-in offline tests
+        run: python godlike2026.py --unit-tests
+      - name: Verify LIVE is rejected by main CLI
+        shell: bash
+        run: |
+          set +e
+          python godlike2026.py --live
+          code=$?
+          set -e
+          if [ "$code" -ne 2 ]; then
+            echo "EXPECTED --live exit code 2, got $code"
+            exit 1
+          fi
+      - name: Synthetic replay smoke test (NOT profitability evidence)
+        run: python godlike2026.py --replay-csv sample_synthetic.csv --decimals 6 --cash 1000000 --trade-budget 1000 --stress --report-dir test_reports

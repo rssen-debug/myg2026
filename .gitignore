@@ -5,62 +5,30 @@ __pycache__/
 *.so
 .Python
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
+.venv/
 venv/
 env/
-ENV/
-.venv/
-
-# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Database files
 *.db
 *.db.lock
 *.sqlite
 *.sqlite3
-
-# Logs
 *.log
 *.log.*
-
-# Runtime data
 *.status.json
 *.runs.jsonl
 *.settings.json
 *.lock
 *.stop
 *.cmd
-
-# Large data files
-paper_session_*.db
-
-# Environment
+!START_PAPER.cmd
 .env
 .env.local
 *.secret
-
-# Local config
 running_cmd.json
+reports/
+validation_final/
+test_reports/
