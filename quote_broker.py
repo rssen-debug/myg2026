@@ -203,9 +203,17 @@ class QuoteBroker:
                     raise ValueError("Tokenens säkerhetsunderlag har löpt ut")
                 if not 0 <= self.clock()-context["sell_probe"]["received_at"] <= 30:
                     raise ValueError("Säljbarhetskontrollens offert har löpt ut")
-                if (number(data["liquidity_usd"]) < number(context["observed_liquidity_usd"]) * D("0.9") or
-                        abs(number(data["price_usd"])/number(context["signal_price_usd"])-1)*100 > self.cfg["BASE_SLIPPAGE_PCT"]):
-                    raise ValueError("Pris eller likviditet flyttades under offertförberedelsen")
+                # Track the actual independent reason why a QUOTED PAPER
+                # order was rejected. Previously both situations returned the
+                # same opaque error, hiding whether liquidity drained or price
+                # changed. Neither numeric safety threshold is relaxed.
+                if number(data["liquidity_usd"]) < number(context["observed_liquidity_usd"]) * D("0.9"):
+                    raise ValueError("Verifierad målpoolslikviditet föll över 10% under offertförberedelsen")
+                price_drift_pct = abs(number(data["price_usd"])/number(context["signal_price_usd"])-1)*100
+                if price_drift_pct > self.cfg["BASE_SLIPPAGE_PCT"]:
+                    raise ValueError(
+                        f"Verifierat målpoolpris avvek {price_drift_pct:.2f}% från signalpris; "
+                        f"strikt gräns {self.cfg['BASE_SLIPPAGE_PCT']}%")
                 if quote is not None and quote.out_amount_raw > context["sell_probe_raw"]:
                     raise ValueError("Köpmängden överskrider verifierad säljoffertstorlek")
             if quote is not None:
