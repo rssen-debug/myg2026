@@ -121,12 +121,23 @@ def main():
             raise ValueError("Unexpected existing paper DB without restorable artifact")
         event("FIRST_RUN", detail="No prior paper artifact. Starting separate history.")
         return
-    latest = max(available, key=lambda a:a.get("created_at",""))
-    archive = requests.get(latest["archive_download_url"], headers=headers, timeout=(15, 90))
-    archive.raise_for_status()
-    restored = safe_extract_zip(archive.content, Path("."))
-    event("RESTORED", artifact_id=latest["id"], detail=f"{len(restored)} paper state files")
-    print(f"Restored prior paper state artifact ID {latest['id']}; this is NOT continuous coverage.")
+    # A previous failed run may have uploaded ONLY diagnostics (no SQLite).
+    # Skip such an explicitly incomplete archive, but never accept corrupt,
+    # unknown, path-traversing or invalid SQLite data. Keep the gap visible.
+    for candidate in sorted(available, key=lambda a: a.get("created_at", ""), reverse=True):
+        archive = requests.get(candidate["archive_download_url"], headers=headers, timeout=(15, 90))
+        archive.raise_for_status()
+        try:
+            restored = safe_extract_zip(archive.content, Path("."))
+        except ValueError as exc:
+            if str(exc) == "No paper_forward.db in previous run":
+                print(f"PAPER_STATE: SKIP_REPORT_ONLY_ARTIFACT id={candidate['id']} (missing SQLite)")
+                continue
+            raise
+        event("RESTORED", artifact_id=candidate["id"], detail=f"{len(restored)} paper state files")
+        print(f"Restored prior paper state artifact ID {candidate['id']}; this is NOT continuous coverage.")
+        return
+    raise ValueError("Historical artifacts exist but none contains a recoverable paper SQLite database")
 
 
 if __name__ == "__main__":
