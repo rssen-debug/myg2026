@@ -45,6 +45,26 @@ class TestSafePaperRestore(unittest.TestCase):
         with sqlite3.connect(self.path/"paper_forward.db") as c:
             self.assertEqual(c.execute("SELECT id FROM x").fetchone()[0],42)
 
+    def test_real_artifact_contains_reports_but_restores_only_state(self):
+        database = sqlite_bytes()
+        zipped = archive([
+            ("paper_forward.db", database),
+            ("forward_profit_gate.json", b'{"status":"NOT_READY"}'),
+            ("forward_capacity_gate.json", b'{"live_approved":false}'),
+            ("forward_reports/example.json", b'{"simulated":true}'),
+        ])
+        result = module.safe_extract_zip(zipped, self.path)
+        self.assertIn("paper_forward.db", result)
+        self.assertTrue((self.path/"paper_forward.db").exists())
+        self.assertFalse((self.path/"forward_profit_gate.json").exists())
+        self.assertFalse((self.path/"forward_capacity_gate.json").exists())
+
+    def test_traversal_behind_report_folder_rejected(self):
+        with self.assertRaisesRegex(ValueError,"unsafe"):
+            module.safe_extract_zip(archive([
+                ("paper_forward.db", sqlite_bytes()),
+                ("forward_reports/../../.env", b"secret")]), self.path)
+
     def test_missing_database_rejected(self):
         with self.assertRaisesRegex(ValueError,"No paper_forward.db"):
             module.safe_extract_zip(archive([("paper_forward.log",b"log")]),self.path)
