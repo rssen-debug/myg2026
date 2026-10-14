@@ -283,7 +283,7 @@ def render_dashboard(snapshot):
         if discovery.get("errors"):
             lines.append("DELVIS KANDIDATDATA: " + str(discovery["errors"])[:240])
     if not report.get("total_trades") and not snapshot.get("positions"):
-        lines.append("Ingen genomförd affär ännu. $0 betyder ingen observerad handelsvinst, inte bevisad lönsamhet.")
+        lines.append("INGA TRADES: Nettoresultat ovan är en modellerad likvidationsvärdering av startportföljens USDC/SOL och eventuell konverteringsfriktion, INTE handelsvinst eller handelsförlust.")
     valuation_time = snapshot.get("report_as_of")
     if snapshot["status"] == "DEGRADED" or (valuation_time and (datetime.now(timezone.utc) - datetime.fromisoformat(valuation_time)).total_seconds() > 30):
         lines.append("OBS: ovanstående PnL är senaste sparade värdering; ny värdering inväntas.")
