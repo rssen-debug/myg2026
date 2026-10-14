@@ -1,4 +1,4 @@
-name: GODLIKE opt-in verified Token-2022 PAPER market trial
+name: GODLIKE opt-in verified Token-2022 PAPER market trial v2
 on:
   push:
     branches: [godlike2026-paper-audit]
@@ -9,7 +9,7 @@ permissions:
 jobs:
   strictly-paper-no-wallet:
     runs-on: ubuntu-latest
-    timeout-minutes: 9
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,8 +25,8 @@ jobs:
           set +e
           timeout --signal=INT --kill-after=20s 440s python -u godlike2026.py \
             --realtime --execution quote --token2022-metadata-paper-experiment \
-            --duration 330 --cash 100 --trade-budget 20 \
-            --db token2022_metadata_experiment.db --report-dir token2022_paper_reports
+            --duration 240 --cash 100 --trade-budget 20 \
+            --db token2022_metadata_experiment_v2.db --report-dir token2022_paper_reports
           rc=$?
           set -e
           echo "TOKEN2022_PAPER_EXIT=$rc"
@@ -38,10 +38,10 @@ jobs:
         if: always()
         shell: bash
         run: |
-          python paper_funnel.py --db token2022_metadata_experiment.db --output t2022_paper_funnel.json
-          python trench_funnel.py --db token2022_metadata_experiment.db --output t2022_trench_report.json
+          python paper_funnel.py --db token2022_metadata_experiment_v2.db --output t2022_paper_funnel.json
+          python trench_funnel.py --db token2022_metadata_experiment_v2.db --output t2022_trench_report.json
           set +e
-          python paper_profit_gate.py --db token2022_metadata_experiment.db --output t2022_profit_audit.json
+          python paper_profit_gate.py --db token2022_metadata_experiment_v2.db --output t2022_profit_audit.json
           rc=$?
           set -e
           if [ "$rc" -ne 2 ]; then
@@ -54,10 +54,10 @@ jobs:
           python - <<'PY'
           import json,sqlite3
           from pathlib import Path
-          status=json.loads(Path("token2022_metadata_experiment.status.json").read_text())
+          status=json.loads(Path("token2022_metadata_experiment_v2.status.json").read_text())
           assert status["mode"]=="PAPER_REAL_MARKET"
           assert status["actual_money_used"] is False
-          db="file:token2022_metadata_experiment.db?mode=ro"
+          db="file:token2022_metadata_experiment_v2.db?mode=ro"
           with sqlite3.connect(db,uri=True) as con:
               assert con.execute("PRAGMA quick_check").fetchone()[0]=="ok"
           print("All orders are simulated. NO live adapter or wallet keys used.")
@@ -66,13 +66,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: token2022-opt-in-paper-trial-no-funds
+          name: token2022-opt-in-paper-trial-v2-no-funds
           path: |
-            token2022_metadata_experiment.db
-            token2022_metadata_experiment.settings.json
-            token2022_metadata_experiment.status.json
-            token2022_metadata_experiment.log
-            token2022_metadata_experiment.runs.jsonl
+            token2022_metadata_experiment_v2.db
+            token2022_metadata_experiment_v2.settings.json
+            token2022_metadata_experiment_v2.status.json
+            token2022_metadata_experiment_v2.log
+            token2022_metadata_experiment_v2.runs.jsonl
             t2022_paper_funnel.json
             t2022_trench_report.json
             t2022_profit_audit.json
