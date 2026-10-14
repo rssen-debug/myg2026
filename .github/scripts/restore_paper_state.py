@@ -22,6 +22,22 @@ FILES = {
     "paper_forward.runs.jsonl",
     "forward_pulse_runs.jsonl",
 }
+# Artifacts also contain published reports. Validate their known names but
+# do not restore stale reports into the new run. Only state files are resumed.
+REPORT_FILES = {"forward_profit_gate.json", "forward_capacity_gate.json", "forward_funnel.json"}
+
+
+def recognized_report(name):
+    if name in REPORT_FILES:
+        return True
+    if name.startswith("forward_reports/"):
+        relative = name[len("forward_reports/"):]
+        if (relative and "/" not in relative and "\\" not in relative and
+                ".." not in relative and relative.endswith((".json", ".csv"))):
+            return True
+    return False
+
+
 MAX_FILE_BYTES = 200 * 1024 * 1024
 MAX_ARCHIVE_BYTES = 200 * 1024 * 1024
 
@@ -38,7 +54,7 @@ def safe_extract_zip(content: bytes, target: Path):
             raise ValueError("Empty state archive")
         for info in infos:
             name = info.filename
-            if name not in FILES or name in seen or info.is_dir():
+            if not (name in FILES or recognized_report(name)) or name in seen or info.is_dir():
                 raise ValueError("Unexpected, repeated, or unsafe archive member")
             mode = info.external_attr >> 16
             if stat.S_ISLNK(mode):
@@ -51,6 +67,8 @@ def safe_extract_zip(content: bytes, target: Path):
         # Extract to memory first, so validation occurs before touching state.
         recovered = {}
         for info in infos:
+            if info.filename not in FILES:
+                continue
             data = z.read(info)
             if len(data) != info.file_size:
                 raise ValueError("Paper state member has incorrect size")
