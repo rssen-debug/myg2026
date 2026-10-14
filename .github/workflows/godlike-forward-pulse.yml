@@ -1,6 +1,7 @@
 name: GODLIKE intermittent PAPER research pulse
 
 # This is NOT continuous trading or a profitability/live-readiness certificate.
+# Resume the last intact PAPER database, explicitly skipping diagnostics-only failed artifacts.
 on:
   push:
     branches: [main]
