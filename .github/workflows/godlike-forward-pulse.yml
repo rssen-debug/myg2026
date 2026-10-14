@@ -3,6 +3,9 @@ name: GODLIKE intermittent PAPER research pulse
 # This is NOT continuous trading or a profitability/live-readiness certificate.
 # Resume the last intact PAPER database, explicitly skipping diagnostics-only failed artifacts.
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/godlike-forward-pulse.yml']
   schedule:
     - cron: '17 */6 * * *'
   workflow_dispatch:
@@ -18,7 +21,7 @@ concurrency:
 jobs:
   paper-only:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 13
     steps:
       - name: Checkout isolated trading audit branch
         uses: actions/checkout@v4
@@ -42,8 +45,8 @@ jobs:
         shell: bash
         run: |
           set +e
-          timeout --signal=INT --kill-after=20s 420s python -u godlike2026.py \
-            --realtime --execution quote --duration 240 --cash 100 \
+          timeout --signal=INT --kill-after=20s 540s python -u godlike2026.py \
+            --realtime --execution quote --duration 480 --cash 100 \
             --trade-budget 20 --db paper_forward.db --report-dir forward_reports
           rc=$?
           set -e
