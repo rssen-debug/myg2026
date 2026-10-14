@@ -1,12 +1,5 @@
-numpy
-opencv-contrib-python==4.10.0.84
-yt-dlp
-edge-tts==7.2.8
-faster-whisper==1.0.3
-requests
-imagehash
-pillow
-# optional (better B-roll matching, heavy):
-# sentence-transformers
-
-imageio-ffmpeg
+# Versions actually used for the Windows/Python 3.11 validation run.
+# Install in a dedicated environment; this is not a transitive hash lock.
+requests==2.34.2
+truststore==0.10.4
+solders==0.29.0
