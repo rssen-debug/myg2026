@@ -22,6 +22,7 @@ DEX_FEEDS = (
     ("dex_community_takeovers", "community-takeovers/latest/v1"),
 )
 GECKO_BASE = "https://api.geckoterminal.com/api/v2/networks/solana/new_pools"
+GECKO_TRENDING = "https://api.geckoterminal.com/api/v2/networks/solana/trending_pools"
 BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 QUOTE_ASSETS = frozenset({
     "11111111111111111111111111111111",
@@ -100,8 +101,10 @@ def _interleave(groups, maximum):
 def discover_mints(fetch=get_public_json, max_mints=200, limiter=None, gecko_pages=5, should_stop=None):
     """Return (deduplicated candidates, auditable per-feed status).
 
-    Run at most once a minute: five Dex GETs plus five Gecko GETs by default.
-    More than five rapid Gecko pages produced HTTP 429 in the public smoke test;
+    Run at most once a minute: five Dex GETs plus one Gecko trending-pool
+    page and up to five Gecko new-pool pages by default. Gecko's public API
+    has variable shared-IP limits (~10/min); partial failures are explicit.
+    More than five rapid Gecko new-pool pages produced HTTP 429 in the public smoke test;
     callers may explicitly choose up to eight, but never retry an error here.
     Gecko pagination stops on the first failure/empty page, retaining prior data.
     `limiter`, if supplied, applies to every request. Public rate limits can
@@ -147,6 +150,25 @@ def discover_mints(fetch=get_public_json, max_mints=200, limiter=None, gecko_pag
         sources.append(source)
 
     if gecko_pages and not cancelled:
+        # Trending discovery adds liquid, actively traded pools often missing
+        # from recent-promotional Dex feeds. It is NOT a buy or risk signal.
+        # Put its candidates first in fair interleaving; keep full risk checks.
+        trending = {"source": "gecko_trending_pools", "status": "OK",
+                    "count": 0, "invalid_entries": 0}
+        try:
+            values, invalid = _gecko_mints(request(
+                f"{GECKO_TRENDING}?include=base_token&page=1"))
+            trending.update(count=len(values), invalid_entries=invalid)
+            groups.insert(0, values)
+        except DiscoveryCancelled:
+            cancelled = True
+            trending["status"] = "CANCELLED"
+        except Exception as exc:
+            trending.update(status="ERROR", error=f"{type(exc).__name__}: {exc}"[:240])
+            groups.insert(0, [])
+        sources.append(trending)
+
+    if gecko_pages and not cancelled:
         source = {"source": "gecko_new_pools", "status": "OK", "count": 0,
                   "invalid_entries": 0, "pages_requested": 0, "pages_received": 0}
         values = []
@@ -187,5 +209,5 @@ def discover_mints(fetch=get_public_json, max_mints=200, limiter=None, gecko_pag
              "partial_failure": bool(errors) or cancelled, "errors": errors,
              "cancelled": cancelled,
              "completion": "CANCELLED" if cancelled else "PARTIAL" if errors else "COMPLETE",
-             "disclaimer": "Discovery only; promotional feeds and new Solana pools. Not every token is a meme or safe to trade."}
+             "disclaimer": "Discovery only; promotional, trending and new Solana pools. Not every token is a meme or safe to trade."}
     return candidates, stats
