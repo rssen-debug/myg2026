@@ -172,7 +172,9 @@ class PaperSession:
         keys = [k for k in self.bot.cfg if k.endswith("_PCT") or k.endswith("_USD")]
         keys += ["MAX_OPEN_POSITIONS", "MAX_CONSECUTIVE_LOSSES", "SIGNAL_MIN_SECONDS",
                  "COOLDOWN_HOURS", "CIRCUIT_BREAKER_HOURS", "MAX_MARKET_DATA_AGE_SECONDS"]
-        keys += ["EXECUTION_MODEL", "PAPER_NETWORK_FEE_LAMPORTS", "PAPER_EXECUTION_DELAY_MS", "PAPER_ADVERSE_BPS", "QUOTE_MAX_AGE_MS"]
+        keys += ["EXECUTION_MODEL", "TOKEN2022_METADATA_PAPER_EXPERIMENT",
+                 "PAPER_NETWORK_FEE_LAMPORTS", "PAPER_EXECUTION_DELAY_MS",
+                 "PAPER_ADVERSE_BPS", "QUOTE_MAX_AGE_MS"]
         settings = {k: str(self.bot.cfg[k]) for k in sorted(set(keys)) if k in self.bot.cfg}
         settings["INITIAL_CASH_USD"] = str(self.bot.state.get_wallet()["initial_cash_usd"])
         settings_path = self.db_path.with_suffix(".settings.json")
