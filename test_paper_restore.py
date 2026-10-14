@@ -1,5 +1,7 @@
 """Adversarial archive-restoration checks. No network and no real trading."""
 import io
+import json
+import os
 import sqlite3
 import stat
 import tempfile
@@ -64,6 +66,39 @@ class TestSafePaperRestore(unittest.TestCase):
             module.safe_extract_zip(archive([
                 ("paper_forward.db", sqlite_bytes()),
                 ("forward_reports/../../.env", b"secret")]), self.path)
+
+    def test_skip_failed_report_only_artifact_and_restore_prior_state(self):
+        from unittest.mock import Mock, patch
+        recent = archive([("forward_profit_gate.json", b'{"status":"NOT_READY"}')])
+        previous = archive([("paper_forward.db", sqlite_bytes())])
+        response_list = Mock()
+        response_list.json.return_value = {"artifacts": [
+            {"name":"godlike-forward-state","id":20,"expired":False,
+             "created_at":"2026-10-14T19:00:00Z","archive_download_url":"https://example.test/20",
+             "workflow_run":{"id":20}},
+            {"name":"godlike-forward-state","id":10,"expired":False,
+             "created_at":"2026-10-14T18:00:00Z","archive_download_url":"https://example.test/10",
+             "workflow_run":{"id":10}},
+        ]}
+        response_recent = Mock(content=recent)
+        response_previous = Mock(content=previous)
+        cwd = Path.cwd()
+        try:
+            os.chdir(self.path)
+            with patch.dict(os.environ, {
+                "GITHUB_REPOSITORY":"rssen-debug/myg2026",
+                "GITHUB_TOKEN":"synthetic-test-token",
+                "GITHUB_RUN_ID":"30",
+            }), patch("requests.get", side_effect=[response_list, response_recent, response_previous]) as getter:
+                module.main()
+                self.assertEqual(getter.call_count,3)
+            with sqlite3.connect(self.path/"paper_forward.db") as c:
+                self.assertEqual(c.execute("SELECT id FROM x").fetchone()[0],42)
+            events = [json.loads(s) for s in (self.path/"forward_pulse_runs.jsonl").read_text().splitlines()]
+            self.assertEqual(events[-1]["artifact_id"],10)
+            self.assertEqual(events[-1]["status"],"RESTORED")
+        finally:
+            os.chdir(cwd)
 
     def test_missing_database_rejected(self):
         with self.assertRaisesRegex(ValueError,"No paper_forward.db"):
