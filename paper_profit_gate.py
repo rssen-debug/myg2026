@@ -27,6 +27,9 @@ def evaluate(db_path, min_days=30, min_closed=200):
               "paper_min_covered_minutes_per_day":None,
               "paper_closed_positions":0, "paper_winning_closed_positions":0,
               "paper_mean_net_per_closed_position_usd":None,
+              "paper_native_sol_balance_lamports":None,
+              "paper_modeled_fee_per_fill_lamports":None,
+              "paper_remaining_minimal_buy_sell_roundtrips":None,
               "paper_realized_net_usd":None, "paper_max_drawdown_pct":None,
               "out_of_sample_validated":False, "status":"NOT_READY", "reasons":[]}
     if min_days <= 0 or min_closed <= 0:
@@ -82,6 +85,31 @@ def evaluate(db_path, min_days=30, min_closed=200):
                 result["paper_mean_net_per_closed_position_usd"] = str(pnl / len(positions))
             if pnl <= 0:
                 result["reasons"].append("Closed paper trades have no positive modeled net PnL")
+            # For a $100 paper bank, even an otherwise profitable model can
+            # stop after a few trades if native SOL fees are never replenished.
+            # Count a MINIMUM of two fills per closed position; TP1/TP2 require
+            # more. Do not silently assume free SOL or refundable rent.
+            if {"execution_funding_evidence", "execution_balances"} <= tables:
+                funding_row = con.execute(
+                    "SELECT evidence_json FROM execution_funding_evidence WHERE id=1").fetchone()
+                sol_row = con.execute(
+                    "SELECT raw_amount FROM execution_balances WHERE mode='PAPER' AND asset='native:SOL'").fetchone()
+                if funding_row is not None and sol_row is not None:
+                    funding = json.loads(funding_row["evidence_json"])
+                    fee = int(funding["policy"]["estimated_network_fee_lamports"])
+                    sol = int(sol_row["raw_amount"])
+                    if fee <= 0 or sol < 0:
+                        raise ValueError("Invalid native SOL fee reserve/fee policy")
+                    capacity = sol // (2 * fee)
+                    result["paper_native_sol_balance_lamports"] = sol
+                    result["paper_modeled_fee_per_fill_lamports"] = fee
+                    result["paper_remaining_minimal_buy_sell_roundtrips"] = capacity
+                    if len(positions) + capacity < min_closed:
+                        result["reasons"].append(
+                            f"Paper SOL fee reserve supports at most {capacity} further minimal two-fill roundtrips; "
+                            f"{min_closed} closed trades cannot be achieved without explicit fee funding/recalibration")
+                else:
+                    result["reasons"].append("No verified initialized PAPER native-SOL fee reserve")
             equity_rows = con.execute("SELECT equity_usd, complete FROM equity_history ORDER BY timestamp, id").fetchall()
             if not equity_rows:
                 result["reasons"].append("No equity curve saved")
