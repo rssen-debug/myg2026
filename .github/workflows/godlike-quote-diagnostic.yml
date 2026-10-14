@@ -1,0 +1,57 @@
+name: GODLIKE Jupiter quote path diagnostic (read only)
+on:
+  push:
+    branches: [godlike2026-paper-audit]
+    paths: ['.github/workflows/godlike-quote-diagnostic.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  keyless-quote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Read-only Metis Jupiter quote without wallet, key, transaction or order
+        run: |
+          python - <<'PY'
+          from datetime import datetime,timezone
+          import json
+          from pathlib import Path
+          from quote_provider import JupiterV2QuoteProvider,QuoteRequest,QuoteUnavailable
+          from execution_engine import SOL_MINT,ExecutionPolicy,validate_execution_quote
+          USDC="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+          policy=ExecutionPolicy()
+          outcome={"mode":"PUBLIC_QUOTE_ONLY",
+                   "actual_money_used":False,
+                   "live_approved":False,"profitability_validated":False,
+                   "quote_observed_at_utc":datetime.now(timezone.utc).isoformat()}
+          try:
+              request=QuoteRequest(SOL_MINT,USDC,10_000_000,100,
+                                   policy.quote_max_age_ms,policy.exclude_routers)
+              q=JupiterV2QuoteProvider().quote(request)
+              validate_execution_quote(q,policy,q.received_at)
+              outcome.update(status="QUOTE_VALID",router=q.router,
+                             in_amount_raw=q.in_amount_raw,
+                             out_amount_raw=q.out_amount_raw,
+                             impact_pct=str(q.price_impact_pct),
+                             provider=q.provider)
+          except Exception as exc:
+              outcome.update(status="QUOTE_UNAVAILABLE",
+                             exception_class=type(exc).__name__,
+                             message=str(exc)[:300])
+          Path("jupiter_keyless_quote_diagnostic.json").write_text(json.dumps(outcome,indent=2))
+          print(json.dumps(outcome,indent=2))
+          assert outcome["actual_money_used"] is False
+          PY
+      - name: Archive quote availability diagnostic not execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: godlike-quote-only-diagnostic
+          path: jupiter_keyless_quote_diagnostic.json
+          if-no-files-found: warn
+          retention-days: 14
