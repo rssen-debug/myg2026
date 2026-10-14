@@ -248,7 +248,17 @@ class QuoteBroker:
             spend = number(self.cfg["TRADE_BUDGET_USD"])/(1+number(self.cfg["BASE_SLIPPAGE_PCT"])/100) - fee
             amount = int((spend/number(fx[USDC]["price_usd"])*D(10**6)).to_integral_value(rounding=ROUND_DOWN))
             amount = min(amount, self.ledger.limits.max_order_raw)
-            probe_raw = int((spend/number(pair["price_usd"])*D(10**metadata["decimals"])*D("1.1")).to_integral_value(rounding=ROUND_UP))
+            # Price-scaled *1.1 is not an executable token quantity. A pool
+            # can have a safe $20 BUY route but fail a fictitious oversized
+            # $22 reverse SELL. Probe the expected units from an actual fresh
+            # same-pool BUY quote first, then check the exact reverse size.
+            # Engine will independently re-quote and reject any later BUY
+            # amount above this vetted reverse-sale capacity.
+            buy_probe = self._quote(USDC, mint, amount, valuation=True)
+            self._validate_target_route(buy_probe, mint, pair["pair_address"])
+            probe_raw = buy_probe.out_amount_raw
+            if probe_raw <= 0:
+                raise QuoteUnavailable("Köpets verifierade tokenmängd är ogiltig")
             probe = self._quote(mint, USDC, probe_raw, valuation=True)
             self._validate_target_route(probe, mint, pair["pair_address"])
             intent = OrderIntent(f"{VERSION}:{mint}:{pair['observed_at']}", "PAPER", "BUY", USDC, mint,
@@ -257,7 +267,9 @@ class QuoteBroker:
                        "decimals": metadata["decimals"], "liquidity_cap_usd": str(liquidity_cap),
                        "observed_liquidity_usd": str(pair["liquidity_usd"]), "signal_price_usd": str(pair["price_usd"]),
                        "security_checked_at": float(metadata["validated_at"]), "security_metadata": metadata,
-                       "fx": fx, "reason": "MOMENTUM_ENTRY", "sell_probe_raw": probe_raw, "sell_probe": probe.to_dict()}
+                       "fx": fx, "reason": "MOMENTUM_ENTRY",
+                       "preflight_buy_probe": buy_probe.to_dict(),
+                       "sell_probe_raw": probe_raw, "sell_probe": probe.to_dict()}
             self._save_context(intent, context)
             result = self.engine.execute(intent)
             if result["state"] != "CONFIRMED":
