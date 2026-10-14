@@ -66,6 +66,40 @@ class SessionLock:
             self.file.close()
 
 
+def choose_candidate_batch(watchlist, next_index, signal_history, limit, now):
+    """Fair scanner rotation with bounded revisits for promising paper signals.
+
+    The regular rotation retains at least half the slots when there are recent
+    signal candidates. It does NOT bypass token security, market-data freshness,
+    quote checks or position risk. All token decisions remain separate.
+    """
+    if not watchlist or limit <= 0:
+        return [], next_index
+    limit = min(int(limit), len(watchlist))
+    recent = []
+    for mint in watchlist:
+        observations = signal_history.get(mint, ()) if isinstance(signal_history, dict) else ()
+        if not observations:
+            continue
+        try:
+            last = float(observations[-1][0])
+        except (TypeError, ValueError, IndexError, KeyError):
+            continue
+        if 0 <= now - last <= 180:
+            recent.append((float(observations[0][0]), mint))
+    recent.sort(key=lambda pair: pair[0])
+    priority = [mint for _, mint in recent[:limit // 2]]
+    selected, seen = list(priority), set(priority)
+    offset = 0
+    while len(selected) < limit and offset < len(watchlist):
+        mint = watchlist[(next_index + offset) % len(watchlist)]
+        offset += 1
+        if mint not in seen:
+            selected.append(mint)
+            seen.add(mint)
+    return selected, (next_index + offset) % len(watchlist)
+
+
 class PaperSession:
     """Separates a responsive read-only screen from serialized paper decisions."""
     def __init__(self, bot, duration_seconds=0, poll_interval=5):
@@ -181,8 +215,9 @@ class PaperSession:
         wallet = self.bot.state.get_wallet()
         if not self.entries_paused.is_set() and wallet["cash_usd"] >= self.bot.cfg["TRADE_BUDGET_USD"]:
             batch_size = max(1, min(60, int(self.bot.cfg.get("SCAN_BATCH_SIZE", 60))))
-            batch_count = min(batch_size, len(self.watchlist))
-            batch = [self.watchlist[(self.watch_index + i) % len(self.watchlist)] for i in range(batch_count)]
+            batch, self.watch_index = choose_candidate_batch(
+                self.watchlist, self.watch_index, getattr(self.bot, "_signals", {}),
+                batch_size, time.time())
             for index, mint in enumerate(batch):
                 if self.stop.is_set() or self.entries_paused.is_set() or self.stop_path.exists() or len(self.bot.state.get_open_positions(True)) >= self.bot.cfg["MAX_OPEN_POSITIONS"]:
                     break
@@ -197,7 +232,6 @@ class PaperSession:
                         prefetch(batch[index:index + 30])
                         if self.stop.is_set() or self.entries_paused.is_set() or self.stop_path.exists():
                             break
-                self.watch_index += 1
                 self.evaluated_mints.add(mint)
                 self.cycle_evaluated += 1
                 self.stage("Utvärderar " + mint[:12] + "...")
