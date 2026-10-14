@@ -1,4 +1,4 @@
-name: GODLIKE short real-market PAPER smoke
+name: GODLIKE upgraded real-market PAPER scanner test
 on:
   push:
     branches: [godlike2026-paper-audit]
@@ -9,7 +9,7 @@ permissions:
 jobs:
   real-market-paper:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 9
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,26 +17,52 @@ jobs:
           python-version: '3.11'
       - name: Install pinned dependencies
         run: python -m pip install -r requirements.txt
-      - name: Exercise paper quotes with real public data only
+      - name: Exercise core scanner and TP/moonbag PAPER decision loop with real public data
         shell: bash
         run: |
           set +e
-          timeout --signal=INT --kill-after=10s 160s python -u godlike2026.py --realtime --execution quote --duration 40 --cash 100 --trade-budget 20 --db paper_network_smoke.db --report-dir reports
+          timeout --signal=INT --kill-after=20s 420s python -u godlike2026.py --realtime --execution quote --duration 240 --cash 100 --trade-budget 20 --db paper_trench_smoke.db --report-dir trench_smoke_reports
           rc=$?
-          echo "PAPER_REALTIMESMOKE_EXIT=$rc"
+          set -e
+          echo "REAL_MARKET_PAPER_RC=$rc"
           if [ "$rc" -ne 0 ]; then
-            echo "Paper session encountered an error, timed out, or was interrupted"
+            echo "Paper run failed/timed out. Keep artifacts for diagnosis; never use real funds."
             exit 1
           fi
-      - name: Publish paper status and log; no actual orders
+      - name: Distinguish unique candidates, rejections and actual modeled trades
+        if: always()
+        shell: bash
+        run: |
+          python paper_funnel.py --db paper_trench_smoke.db --output paper_trench_funnel.json
+          python trench_funnel.py --db paper_trench_smoke.db --output paper_trench_evidence.json
+      - name: Verify paper-only ledger and no live orders
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json,sqlite3
+          from pathlib import Path
+          p=Path("paper_trench_smoke.status.json")
+          assert p.exists(), "Missing paper status"
+          status=json.loads(p.read_text())
+          assert status.get("actual_money_used") is False
+          assert status.get("mode")=="PAPER_REAL_MARKET"
+          with sqlite3.connect("file:paper_trench_smoke.db?mode=ro",uri=True) as con:
+              assert con.execute("PRAGMA quick_check").fetchone()[0]=="ok"
+          print("Paper mode, no money and ledger integrity verified.")
+          PY
+      - name: Preserve PAPER fills, source diagnostics and reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: godlike-paper-network-smoke
+          name: godlike-upgraded-trench-paper-test
           path: |
-            paper_network_smoke.status.json
-            paper_network_smoke.log
-            paper_network_smoke.runs.jsonl
-            reports/
+            paper_trench_smoke.db
+            paper_trench_smoke.status.json
+            paper_trench_smoke.log
+            paper_trench_smoke.runs.jsonl
+            paper_trench_funnel.json
+            paper_trench_evidence.json
+            trench_smoke_reports/
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 14
