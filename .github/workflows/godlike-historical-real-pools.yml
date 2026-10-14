@@ -1,0 +1,32 @@
+name: GODLIKE real historical Solana PAPER trade replay
+on:
+  push:
+    branches: [godlike2026-paper-audit]
+    paths:
+      - 'historical_sol_paper.py'
+      - 'test_historical_sol_paper.py'
+      - '.github/workflows/godlike-historical-real-pools.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  historical-real-pools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify historical trading accounting, no lookahead and forced loss recognition
+        run: python -m unittest -v test_historical_sol_paper
+      - name: Download real public Solana pool candles and simulate full BUY/SELL history
+        run: python -u historical_sol_paper.py --max-pools 8 --bars 500 --output historical_ohlcv_report.json
+      - name: Preserve actual public market evidence and results regardless of outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: actual-solana-ohlcv-paper-backtest
+          path: historical_ohlcv_report.json
+          if-no-files-found: warn
+          retention-days: 60
