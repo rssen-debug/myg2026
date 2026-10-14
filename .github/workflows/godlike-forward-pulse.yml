@@ -56,6 +56,20 @@ jobs:
             exit 1
           fi
 
+      - name: Verify no real capital used and SQLite ledger is intact
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, sqlite3
+          from pathlib import Path
+          status = json.loads(Path("paper_forward.status.json").read_text(encoding="utf-8"))
+          assert status.get("mode") == "PAPER_REAL_MARKET", "Wrong runtime mode"
+          assert status.get("actual_money_used") is False, "Capital-use marker is not false"
+          with sqlite3.connect("file:paper_forward.db?mode=ro", uri=True) as conn:
+              assert conn.execute("PRAGMA quick_check").fetchone()[0] == "ok", "SQLite integrity error"
+          print("PAPER mode and SQLite integrity independently checked.")
+          PY
+
       - name: Publish honest NOT_READY audit from accumulated paper data
         if: always()
         shell: bash
