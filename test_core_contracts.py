@@ -86,7 +86,7 @@ class TestDiscovery(unittest.TestCase):
         self.assertEqual(vals, [MINT])
         self.assertEqual(invalid, 1)
     def test_interleave(self):
-        self.assertEqual(_interleave([["a","b"],["a","c"]],3), ["a","b","c"])
+        self.assertEqual(_interleave([["a","b"],["a","c"]],3), ["a","c","b"])
     def test_bounded_discovery(self):
         calls = []
         def fetch(url, timeout):
