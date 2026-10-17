@@ -110,13 +110,25 @@ def evaluate(db_path, min_days=30, min_closed=200):
                             f"{min_closed} closed trades cannot be achieved without explicit fee funding/recalibration")
                 else:
                     result["reasons"].append("No verified initialized PAPER native-SOL fee reserve")
+            # The first saved valuation may already reflect liquidation friction.
+            # Starting the high-water mark there understates risk even with zero trades.
+            # Fail closed if the original paper bankroll cannot be verified.
+            initial_equity = None
+            if "wallet" in tables:
+                wallet_row = con.execute("SELECT initial_cash_usd FROM wallet WHERE id=1").fetchone()
+                if wallet_row is not None:
+                    initial_equity = number(wallet_row["initial_cash_usd"])
+                    if initial_equity <= 0:
+                        raise ValueError("Invalid initial PAPER bankroll")
+            if initial_equity is None:
+                result["reasons"].append("No verified initial PAPER bankroll for drawdown baseline")
             equity_rows = con.execute("SELECT equity_usd, complete FROM equity_history ORDER BY timestamp, id").fetchall()
             if not equity_rows:
                 result["reasons"].append("No equity curve saved")
             elif any(row["complete"] != 1 or row["equity_usd"] is None for row in equity_rows):
                 result["reasons"].append("Incomplete/unknown paper portfolio valuation exists")
-            else:
-                peak, max_dd = None, Decimal(0)
+            elif initial_equity is not None:
+                peak, max_dd = initial_equity, Decimal(0)
                 for row in equity_rows:
                     value = number(row["equity_usd"])
                     if value < 0:

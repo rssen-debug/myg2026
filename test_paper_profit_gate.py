@@ -17,6 +17,8 @@ class TestPaperProfitGate(unittest.TestCase):
             CREATE TABLE positions (id INTEGER, usd_invested TEXT, net_usd_received TEXT, is_paper INTEGER, status TEXT);
             CREATE TABLE trade_history (pos_id INTEGER, usd_amount TEXT, is_paper INTEGER, action TEXT);
             CREATE TABLE equity_history (id INTEGER PRIMARY KEY, timestamp REAL, equity_usd TEXT, complete INTEGER);
+            CREATE TABLE wallet (id INTEGER PRIMARY KEY, initial_cash_usd TEXT);
+            INSERT INTO wallet VALUES (1, '100');
             """)
     def test_missing_database_never_approved(self):
         r = evaluate(self.db)
@@ -56,6 +58,34 @@ class TestPaperProfitGate(unittest.TestCase):
         self.assertFalse(r["profitability_validated"])
         self.assertFalse(r["live_approved"])
         self.assertIn("out-of-sample", " ".join(r["reasons"]))
+    def test_drawdown_includes_original_bankroll_before_first_valuation(self):
+        self.schema()
+        with sqlite3.connect(self.db) as c:
+            c.executemany("INSERT INTO equity_history VALUES (?,?,?,?)",
+                          [(1,2000000000,"99.66",1), (2,2000000060,"99.36",1)])
+        r = evaluate(self.db)
+        self.assertEqual(r["paper_max_drawdown_pct"], "0.64")
+        self.assertFalse(r["profitability_validated"])
+        self.assertFalse(r["live_approved"])
+
+    def test_drawdown_still_tracks_subsequent_higher_equity_peak(self):
+        self.schema()
+        with sqlite3.connect(self.db) as c:
+            c.executemany("INSERT INTO equity_history VALUES (?,?,?,?)",
+                          [(1,2000000000,"100.00",1), (2,2000000060,"105.00",1),
+                           (3,2000000120,"99.00",1)])
+        self.assertEqual(evaluate(self.db)["paper_max_drawdown_pct"], "5.71")
+
+    def test_missing_initial_bankroll_does_not_report_understated_drawdown(self):
+        self.schema()
+        with sqlite3.connect(self.db) as c:
+            c.execute("DELETE FROM wallet")
+            c.execute("INSERT INTO equity_history VALUES (1,2000000000,'99.50',1)")
+        r = evaluate(self.db)
+        self.assertIsNone(r["paper_max_drawdown_pct"])
+        self.assertIn("No verified initial PAPER bankroll", " ".join(r["reasons"]))
+        self.assertFalse(r["live_approved"])
+
     def test_missing_valuation_fails_closed(self):
         self.schema()
         with sqlite3.connect(self.db) as c:
