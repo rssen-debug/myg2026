@@ -41,6 +41,15 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_rejects_compressed_size_metadata_above_limit(self):
+        original = sqlite_bytes()
+        (self.path / "paper_forward.db").write_bytes(original)
+        payload = archive([("paper_forward.db", original)])
+        with mock.patch.object(module, "MAX_ARCHIVE_BYTES", 1):
+            with self.assertRaisesRegex(ValueError, "Oversized paper state archive"):
+                module.safe_extract_zip(payload, self.path)
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
+
     def test_rejects_unsupported_zip_compression_before_publishing(self):
         original = sqlite_bytes()
         (self.path / "paper_forward.db").write_bytes(original)
