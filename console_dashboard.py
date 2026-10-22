@@ -269,13 +269,16 @@ class ConsoleDashboard:
             invalid = metric_health(report)
             missing = missing_metrics(report)
             freshness = valuation_freshness(snapshot.get("report_as_of"))
+            # Detect changed invalid numeric inputs without logging their raw values.
+            invalid_values = tuple((key, str(report.get(key))[:80]) for key in invalid)
             signature = (snapshot.get("status"), snapshot.get("entries_paused"),
                          str(report.get("net_pnl")), len(snapshot.get("positions", [])),
-                         tuple(invalid), tuple(missing), freshness)
+                         tuple(invalid), tuple(missing), freshness, invalid_values)
             if signature != self.last_plain_status:
                 self.stream.write(
                     f"{clean(snapshot.get('updated_at', '--'))} PAPER {clean(signature[0])} "
                     f"PnL {money(report.get('net_pnl'), True)} | "
+                    f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
                     f"DATA {freshness} | INVALID {len(invalid)} "
                     f"[{','.join(invalid[:3]) or '-'}] | MISSING {len(missing)} "
                     f"[{','.join(missing[:3]) or '-'}] "
