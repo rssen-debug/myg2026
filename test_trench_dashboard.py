@@ -37,6 +37,16 @@ class TestMetricLegendHUD(unittest.TestCase):
         self.assertIn("NETTO OKÄNT", output)
         self.assertIn("PF --", output)
 
+class TestMixedMetricQualityHUD(unittest.TestCase):
+    def test_missing_values_still_visible_when_other_metrics_invalid(self):
+        data = example()
+        data["report"]["net_pnl"] = "NaN"
+        data["report"]["win_rate"] = None
+        output = frame(data, width=128, height=80, color=False)
+        self.assertIn("INVALID METRICS: net_pnl", output)
+        self.assertIn("MISSING: win_rate", output)
+        self.assertNotIn("ALL TRACKED METRICS FINITE", output)
+
 class TestMissingMetricHUD(unittest.TestCase):
     def test_missing_and_invalid_metrics_are_distinct(self):
         data = example()
