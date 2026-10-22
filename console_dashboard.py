@@ -305,13 +305,13 @@ class ConsoleDashboard:
                     f"{fit(snapshot.get('updated_at', '--'), 19).strip()} PAPER "
                     f"{status_marker} QUALITY {quality} ({quality_detail}) | "
                     f"DATA {freshness} | "
+                    f"INVALID {len(invalid)} [{','.join(invalid[:3]) or '-'}] | "
+                    f"MISSING {len(missing)} [{','.join(missing[:3]) or '-'}] | "
                     f"PnL {money(report.get('net_pnl'), True)} | "
                     f"CASH {portfolio[0]} | EQUITY {portfolio[1]} | "
-                    f"{fit(snapshot.get('candidates', 0), 5).strip()} tok | "
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
                     f"POSITIONS {len(snapshot.get('positions') or [])} | "
-                    f"INVALID {len(invalid)} [{','.join(invalid[:3]) or '-'}] | "
-                    f"MISSING {len(missing)} [{','.join(missing[:3]) or '-'}]"
+                    f"{fit(snapshot.get('candidates', 0), 5).strip()} tok"
                 , 220).rstrip() + "\n")
                 self.stream.flush()
                 self.last_plain_status = signature
