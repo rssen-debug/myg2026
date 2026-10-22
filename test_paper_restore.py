@@ -41,6 +41,20 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_symlink_restore_root_is_rejected_without_writing_outside(self):
+        outside = self.path / "outside"
+        outside.mkdir()
+        linked = self.path / "restore-link"
+        try:
+            linked.symlink_to(outside, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("Symlink creation unavailable")
+        with self.assertRaisesRegex(ValueError, "target must not be a symlink"):
+            module.safe_extract_zip(
+                archive([("paper_forward.db", sqlite_bytes())]), linked
+            )
+        self.assertFalse((outside / "paper_forward.db").exists())
+
     def test_cumulative_decompressed_limit_preserves_previous_ledger(self):
         original = sqlite_bytes()
         (self.path / "paper_forward.db").write_bytes(original)
