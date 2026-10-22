@@ -410,8 +410,10 @@ class TestSafePaperRestore(unittest.TestCase):
              "created_at":"2026-10-14T18:00:00Z","archive_download_url":"https://example.test/10",
              "workflow_run":{"id":10}},
         ]}
-        response_recent = Mock(content=recent)
-        response_previous = Mock(content=previous)
+        response_recent = mock.MagicMock()
+        response_recent.__enter__.return_value.iter_content.return_value = [recent]
+        response_previous = mock.MagicMock()
+        response_previous.__enter__.return_value.iter_content.return_value = [previous]
         cwd = Path.cwd()
         try:
             os.chdir(self.path)
@@ -467,6 +469,8 @@ class TestSafePaperRestore(unittest.TestCase):
             "archive_download_url": "https://example.test/42",
             "workflow_run": {"id": 42}
         }]}
+        streamed = mock.MagicMock()
+        streamed.__enter__.return_value.iter_content.return_value = [zipped]
         cwd = Path.cwd()
         try:
             os.chdir(self.path)
@@ -474,7 +478,7 @@ class TestSafePaperRestore(unittest.TestCase):
                 "GITHUB_REPOSITORY": "rssen-debug/myg2026",
                 "GITHUB_TOKEN": "synthetic-test-token",
                 "GITHUB_RUN_ID": "43",
-            }), patch("requests.get", side_effect=[listing, Mock(content=zipped)]):
+            }), patch("requests.get", side_effect=[listing, streamed]):
                 with self.assertRaisesRegex(ValueError, "SHA256 digest mismatch"):
                     module.main()
             self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
