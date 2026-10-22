@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from console_dashboard import frame, latest_restore_event
+from console_dashboard import frame, latest_restore_event, percentage
 from paper_runtime import render_dashboard
 
 
@@ -25,6 +25,19 @@ def example():
         "events":[],"quotes":[],"discovery":{},
     }
 
+
+class TestInvalidMetricsHUD(unittest.TestCase):
+    def test_nonfinite_and_malformed_metrics_never_crash_dashboard(self):
+        for bad in ("NaN", "Infinity", "not-a-number"):
+            with self.subTest(value=bad):
+                data = example()
+                data["report"]["net_pnl"] = bad
+                data["report"]["win_rate"] = bad
+                data["report"]["max_drawdown_pct"] = bad
+                output = frame(data, width=128, height=80, color=False)
+                self.assertIn("NETTO OKÄNT", output)
+                self.assertIn("Win --", output)
+                self.assertEqual(percentage(bad), "--")
 
 class TestRestoreEventHUD(unittest.TestCase):
     def test_missing_restore_event_is_unverified(self):
