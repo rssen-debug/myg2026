@@ -1,0 +1,138 @@
+name: GODLIKE intermittent PAPER research pulse
+
+# This is NOT continuous trading or a profitability/live-readiness certificate.
+# Resume the last intact PAPER database, explicitly skipping diagnostics-only failed artifacts.
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/godlike-forward-pulse.yml']
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: godlike-forward-pulse
+  cancel-in-progress: false
+
+jobs:
+  paper-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - name: Checkout isolated trading audit branch
+        uses: actions/checkout@v4
+        with:
+          ref: godlike2026-paper-audit
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pinned dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Restore prior observed PAPER state safely
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .github/scripts/restore_paper_state.py
+
+      - name: Run bounded real-market quotes as PAPER only, never broadcast
+        shell: bash
+        run: |
+          set +e
+          timeout --signal=INT --kill-after=20s 540s python -u godlike2026.py \
+            --realtime --execution quote --duration 480 --cash 100 \
+            --trade-budget 20 --db paper_forward.db --report-dir forward_reports
+          rc=$?
+          set -e
+          echo "PAPER_EXIT=$rc"
+          if [ "$rc" -ne 0 ]; then
+            echo "The PAPER runtime did not finish cleanly; preserving all evidence."
+            exit 1
+          fi
+
+      - name: Verify no real capital used and SQLite ledger is intact
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, sqlite3
+          from pathlib import Path
+          status = json.loads(Path("paper_forward.status.json").read_text(encoding="utf-8"))
+          assert status.get("mode") == "PAPER_REAL_MARKET", "Wrong runtime mode"
+          assert status.get("actual_money_used") is False, "Capital-use marker is not false"
+          # A legacy paper DB may be migrated only with Token-2022 opt-in OFF.
+          # Check the persisted checksum and explicit disabled setting after
+          # running; never silently turn on a new execution model.
+          import hashlib
+          settings = json.loads(Path("paper_forward.settings.json").read_text(encoding="utf-8"))
+          vals = settings["settings"]
+          assert vals.get("TOKEN2022_METADATA_PAPER_EXPERIMENT") == "False", "Token-2022 research model unexpectedly enabled"
+          assert hashlib.sha256(json.dumps(vals, sort_keys=True).encode()).hexdigest() == settings["sha256"], "Paper settings hash mismatch"
+          with sqlite3.connect("file:paper_forward.db?mode=ro", uri=True) as conn:
+              assert conn.execute("PRAGMA quick_check").fetchone()[0] == "ok", "SQLite integrity error"
+          print("PAPER mode and SQLite integrity independently checked.")
+          PY
+
+      - name: Publish honest NOT_READY audit from accumulated paper data
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          python paper_profit_gate.py --db paper_forward.db --output forward_profit_gate.json
+          profit_rc=$?
+          python capital_capacity_gate.py --aum-usd 10000000 --output forward_capacity_gate.json
+          capacity_rc=$?
+          set -e
+          echo "PROFIT_GATE_EXPECTED_NOT_READY=$profit_rc"
+          echo "CAPACITY_GATE_EXPECTED_NOT_READY=$capacity_rc"
+          if [ "$profit_rc" -ne 2 ] || [ "$capacity_rc" -ne 2 ]; then
+            echo "Gate failed unexpectedly, not treating this as financial success."
+            exit 1
+          fi
+
+      - name: Publish unique-token funnel, not inflated polling counts
+        if: always()
+        run: python paper_funnel.py --db paper_forward.db --output forward_funnel.json
+
+      - name: Publish trench evidence audit (aggregated market flow only; no whale/developer verification)
+        if: always()
+        run: python trench_funnel.py --db paper_forward.db --output forward_trench_funnel.json
+
+      - name: Reconcile PAPER order stages and failures (QUOTED is not BOUGHT)
+        if: always()
+        run: python paper_order_stage_audit.py --db paper_forward.db --output forward_order_stage_audit.json
+      - name: Prepare consistent PAPER artifact snapshot
+        if: always()
+        id: snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f paper_forward.db
+          mkdir -p paper_artifact
+          python - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          spec = importlib.util.spec_from_file_location("paper_snapshot", ".github/scripts/snapshot_paper_state.py")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          module.snapshot_paper_db(Path("paper_forward.db"), Path("paper_artifact/paper_forward.db"))
+          PY
+          for file in paper_forward.status.json paper_forward.settings.json paper_forward.log paper_forward.runs.jsonl forward_pulse_runs.jsonl forward_profit_gate.json forward_capacity_gate.json forward_funnel.json forward_trench_funnel.json forward_order_stage_audit.json; do
+            if [ -f "$file" ]; then cp "$file" paper_artifact/; fi
+          done
+          if [ -d forward_reports ]; then cp -R forward_reports paper_artifact/; fi
+
+      - name: Retain validated PAPER snapshot for resumption
+        if: steps.snapshot.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: godlike-forward-state
+          path: paper_artifact/
+          if-no-files-found: warn
+          retention-days: 60
+          overwrite: true
