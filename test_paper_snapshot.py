@@ -58,6 +58,8 @@ class TestPaperSnapshot(unittest.TestCase):
         self.assertIn("module.snapshot_paper_db(", workflow)
         self.assertIn("path: paper_artifact/", workflow)
         self.assertIn("timeout-minutes: 25", workflow)
+        self.assertIn("snapshot_manifest.json", workflow)
+        self.assertIn("hashlib.file_digest", workflow)
         self.assertIn("if: always()", workflow)
         self.assertIn("if: steps.snapshot.outcome == 'success'", workflow)
         self.assertNotIn("            paper_forward.db\\n", workflow)
