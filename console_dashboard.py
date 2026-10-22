@@ -308,9 +308,9 @@ class ConsoleDashboard:
                     f"{status_marker} QUALITY {quality} ({quality_detail}) | "
                     f"DATA {freshness} | "
                     f"INVALID {len(invalid)} [{','.join(invalid[:3]) or '-'}] | "
-                    f"MISSING {len(missing)} [{','.join(missing[:3]) or '-'}] | "
-                    f"PnL {money(report.get('net_pnl'), True)} | "
-                    f"CASH {portfolio[0]} | EQUITY {portfolio[1]} | "
+                    f"MISSING {len(missing)} [{','.join(missing[:3]) or '-'}]| "
+                    f"PnL {money(report.get('net_pnl'), True)}| "
+                    f"CASH {portfolio[0]}| EQUITY {portfolio[1]} | "
                 )
                 suffix = (
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
