@@ -40,7 +40,7 @@ class TestPriorityLogOrder(unittest.TestCase):
         self.assertLess(line.index("DATA MISSING"), line.index("PnL"))
         self.assertLess(line.index("INVALID 1"), line.index("CASH"))
         self.assertIn("net_pnl", line)
-        self.assertLessEqual(len(line.rstrip("\\n")), 220)
+        self.assertLessEqual(len(line.rstrip()), 220)
 
 class TestAlertPriorityHUD(unittest.TestCase):
     def test_quality_warning_survives_long_truncated_plain_line(self):
