@@ -50,8 +50,13 @@ def latest_restore_event(path=Path("forward_pulse_runs.jsonl"), run_id=None):
     try:
         with Path(path).open("rb") as stream:
             stream.seek(0, 2)
-            stream.seek(max(0, stream.tell() - 8192))
-            tail = stream.read().decode("utf-8", errors="replace").splitlines()
+            start = max(0, stream.tell() - 8192)
+            stream.seek(start)
+            raw = stream.read()
+            if start:
+                boundary = raw.find(b"\\n")
+                raw = raw[boundary + 1:] if boundary >= 0 else b""
+            tail = raw.decode("utf-8", errors="replace").splitlines()
         for line in reversed(tail):
             try:
                 item = json.loads(line)
