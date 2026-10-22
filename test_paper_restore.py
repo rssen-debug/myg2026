@@ -456,6 +456,35 @@ class TestSafePaperRestore(unittest.TestCase):
         finally:
             os.chdir(cwd)
 
+    def test_redirect_to_internal_hostname_rejected(self):
+        from unittest.mock import Mock, patch
+        listing = Mock()
+        listing.json.return_value = {"total_count": 1, "artifacts": [{
+            "name": "godlike-forward-state", "id": 42, "expired": False,
+            "created_at": "2026-10-14T18:00:00Z",
+            "archive_download_url": "https://api.github.com/repos/rssen-debug/myg2026/actions/artifacts/42/zip",
+            "workflow_run": {"id": 42}
+        }]}
+        for destination in ("https://metadata.internal/zip", "https://printer.local/zip",
+                            "https://intranet/zip"):
+            with self.subTest(destination=destination):
+                redirect = mock.MagicMock()
+                redirect.__enter__.return_value.status_code = 302
+                redirect.__enter__.return_value.headers = {"Location": destination}
+                cwd = Path.cwd()
+                try:
+                    os.chdir(self.path)
+                    with patch.dict(os.environ, {
+                        "GITHUB_REPOSITORY": "rssen-debug/myg2026",
+                        "GITHUB_TOKEN": "synthetic-test-token",
+                        "GITHUB_RUN_ID": "43",
+                    }), patch("requests.get", side_effect=[listing, redirect]) as getter:
+                        with self.assertRaisesRegex(ValueError, "Unsafe PAPER artifact redirect URL"):
+                            module.main()
+                        self.assertEqual(getter.call_count, 2)
+                finally:
+                    os.chdir(cwd)
+
     def test_redirect_to_private_network_rejected(self):
         from unittest.mock import Mock, patch
         listing = Mock()
@@ -497,7 +526,7 @@ class TestSafePaperRestore(unittest.TestCase):
         redirect = mock.MagicMock()
         redirect.__enter__.return_value.status_code = 302
         redirect.__enter__.return_value.headers = {
-            "Location": "https://storage.example.test:invalid/signed.zip"
+            "Location": "https://storage.example.com:invalid/signed.zip"
         }
         cwd = Path.cwd()
         try:
@@ -525,7 +554,7 @@ class TestSafePaperRestore(unittest.TestCase):
         redirect = mock.MagicMock()
         redirect.__enter__.return_value.status_code = 302
         redirect.__enter__.return_value.headers = {
-            "Location": "https://storage.example.test/signed.zip#unexpected"
+            "Location": "https://storage.example.com/signed.zip#unexpected"
         }
         cwd = Path.cwd()
         try:
@@ -553,7 +582,7 @@ class TestSafePaperRestore(unittest.TestCase):
         }]}
         redirect = mock.MagicMock()
         redirect.__enter__.return_value.status_code = 302
-        redirect.__enter__.return_value.headers = {"Location": "https://storage.example.test/signed.zip"}
+        redirect.__enter__.return_value.headers = {"Location": "https://storage.example.com/signed.zip"}
         download = mock.MagicMock()
         download.__enter__.return_value.status_code = 200
         download.__enter__.return_value.iter_content.return_value = [zipped]
