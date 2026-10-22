@@ -297,7 +297,8 @@ class ConsoleDashboard:
             status_marker = "[!]" if quality == "ALERT" else "[?]" if quality == "PARTIAL" else "[+]"
             signature = (snapshot.get("status"), snapshot.get("entries_paused"),
                          str(report.get("net_pnl")), len(snapshot.get("positions", [])),
-                         tuple(invalid), tuple(missing), freshness, invalid_values, portfolio)
+                         tuple(invalid), tuple(missing), freshness, invalid_values, portfolio,
+                         snapshot.get("candidates", 0))
             if signature != self.last_plain_status:
                 self.stream.write(
                     f"{fit(snapshot.get('updated_at', '--'), 19).strip()} PAPER "
