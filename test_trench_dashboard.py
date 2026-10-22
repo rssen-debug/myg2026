@@ -283,7 +283,8 @@ class TestNonInteractiveQualityStream(unittest.TestCase):
         self.assertIn("INVALID 4", line)
         self.assertIn("BAD [net_pnl,cash,fees]", line)
         self.assertIn("MISSING", line)
-        self.assertIn("win_rate", line)
+        self.assertIn("MISS [win_r", line)
+        self.assertIn("…", line)  # bounded detail truncates before full field name
         self.assertNotIn("initial_cash]", line)
         dashboard.draw(data)
         self.assertEqual(len(output.getvalue().splitlines()), 1)
