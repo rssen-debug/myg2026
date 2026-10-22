@@ -39,6 +39,7 @@ def recognized_report(name):
 
 
 MAX_FILE_BYTES = 200 * 1024 * 1024
+MAX_SQLITE_BYTES = 512 * 1024 * 1024
 MAX_ARCHIVE_BYTES = 200 * 1024 * 1024
 
 
@@ -59,7 +60,7 @@ def safe_extract_zip(content: bytes, target: Path):
             mode = info.external_attr >> 16
             if stat.S_ISLNK(mode):
                 raise ValueError("Archive member is symlink")
-            if info.file_size > MAX_FILE_BYTES:
+            if info.file_size > (MAX_SQLITE_BYTES if name == "paper_forward.db" else MAX_FILE_BYTES):
                 raise ValueError("Oversized paper file")
             seen.add(name)
         if "paper_forward.db" not in seen:
