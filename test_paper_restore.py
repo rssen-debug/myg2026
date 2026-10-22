@@ -41,6 +41,15 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_regular_file_restore_root_is_rejected_unchanged(self):
+        root = self.path / "state-root"
+        root.write_bytes(b"existing root")
+        with self.assertRaisesRegex(ValueError, "target must be a directory"):
+            module.safe_extract_zip(
+                archive([("paper_forward.db", sqlite_bytes())]), root
+            )
+        self.assertEqual(root.read_bytes(), b"existing root")
+
     def test_directory_destination_is_rejected_before_any_state_publish(self):
         existing = self.path / "paper_forward.db"
         existing.mkdir()
