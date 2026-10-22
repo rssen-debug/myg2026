@@ -44,7 +44,7 @@ class TestTrenchMoonbagHUD(unittest.TestCase):
         self.assertIn("FORWARD-DATA", output)
         self.assertIn("HISTORIKSKYDD", output)
         self.assertIn("[AUDIT] ZIP [SHA256/FAIL-CLOSED] · DB [FULL-CHECK] · PAGES [AUTO] · IDS [UNIQUE]", output)
-        self.assertIn("API [EXACT-URL] · URL [CONTROL-CHAR-BLOCK] · URL [FAIL-CLOSED]  |  PAPER ONLY", output)
+        self.assertIn("API [EXACT-URL] · REPORTS [SKIP-ON-RESTORE] · URL [FAIL-CLOSED]  |  PAPER ONLY", output)
         self.assertIn("Färska köp- och säljofferter", output)
 
     def test_without_trench_metrics_hud_does_not_invent_evidence(self):
