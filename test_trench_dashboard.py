@@ -28,6 +28,12 @@ def example():
     }
 
 
+class TestEllipsisTrailingWhitespace(unittest.TestCase):
+    def test_trailing_spaces_are_not_false_truncation(self):
+        self.assertEqual(fit_ellipsis("OK  ", 6), "OK    ")
+        self.assertEqual(fit_ellipsis("OK  ", 4), "OK  ")
+        self.assertEqual(fit_ellipsis("OVERFLOW  ", 5).rstrip(), "OVER…")
+
 class TestNoFalseVerificationLabel(unittest.TestCase):
     def test_finite_metrics_are_not_described_as_verified_trading(self):
         output = io.StringIO()
