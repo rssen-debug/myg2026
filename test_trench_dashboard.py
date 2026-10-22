@@ -28,6 +28,21 @@ def example():
     }
 
 
+class TestMissingReportHUD(unittest.TestCase):
+    def test_missing_or_malformed_report_is_visible_and_never_crashes(self):
+        for value in (None, [], "broken", 123):
+            with self.subTest(value=value):
+                data = example()
+                data["report"] = value
+                display = frame(data, width=118, height=30, color=False)
+                self.assertIn("REPORT MISSING", display)
+                self.assertIn("NETTO OKÄNT", display)
+                output = io.StringIO()
+                dashboard = ConsoleDashboard(stream=output)
+                dashboard.draw(data)
+                self.assertIn("QUALITY ALERT", output.getvalue())
+                self.assertIn("REPORT MISSING", output.getvalue())
+
 class TestEllipsisTrailingWhitespace(unittest.TestCase):
     def test_trailing_spaces_are_not_false_truncation(self):
         self.assertEqual(fit_ellipsis("OK  ", 6), "OK    ")
