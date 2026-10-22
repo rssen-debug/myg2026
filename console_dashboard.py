@@ -29,6 +29,24 @@ def fit(value, width):
     return "".join(result) + " " * max(0, width-used)
 
 
+def fit_ellipsis(value, width):
+    """Show a truncation marker without exceeding terminal cell width."""
+    if width <= 0:
+        return ""
+    full = clean(value)
+    rendered = fit(full, width)
+    # Avoid silently cropping important long stage/status descriptions.
+    if rendered.rstrip() == full:
+        return rendered
+    if width == 1:
+        return "…"
+    return fit(full, width - 1).rstrip() + "…" + " " * max(
+        0, width - 1 - sum(0 if unicodedata.combining(c) else
+                          2 if unicodedata.east_asian_width(c) in {"W", "F"} else 1
+                          for c in fit(full, width - 1).rstrip())
+    )
+
+
 def money(value, signed=False):
     if value is None:
         return "OKÄNT"
@@ -141,7 +159,7 @@ def frame(snapshot, width=118, height=38, color=True):
     row(f"GODLIKE  /  SOLANA TRADING DESK       PAPER {model}  |  LIVE LÅST", "1;36")
     paused = snapshot.get("entries_paused", False)
     row(f"● PAPER ONLY  /  LIVE LOCKED  |  {snapshot.get('status', 'STARTING')}  |  Köp {'PAUSADE' if paused else 'AKTIVA'}  |  {snapshot.get('updated_at', '--')}  |  PID {snapshot.get('pid', '--')}")
-    row(snapshot.get("stage", "Startar..."), "2")
+    row(fit_ellipsis(snapshot.get("stage", "Startar..."), width-4), "2")
     # Pin safety-critical telemetry above the height crop, inspired by
     # Rich's visible-region approach; no extra dependency or refresh thread.
     summary_invalid = metric_health(report)
