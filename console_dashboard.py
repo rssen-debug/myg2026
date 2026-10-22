@@ -36,7 +36,7 @@ def fit_ellipsis(value, width):
     full = clean(value)
     rendered = fit(full, width)
     # Avoid silently cropping important long stage/status descriptions.
-    if rendered.rstrip() == full:
+    if rendered.startswith(full) and not rendered[len(full):].strip():
         return rendered
     if width == 1:
         return "…"
