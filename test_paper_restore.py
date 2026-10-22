@@ -41,6 +41,17 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_wal_mode_database_is_rejected_before_state_overwrite(self):
+        original = sqlite_bytes()
+        (self.path / "paper_forward.db").write_bytes(original)
+        wal_header = bytearray(original)
+        wal_header[18:20] = bytes((2, 2))
+        with self.assertRaisesRegex(ValueError, "WAL-mode paper database"):
+            module.safe_extract_zip(
+                archive([("paper_forward.db", bytes(wal_header))]), self.path
+            )
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
+
     def test_encrypted_member_rejected_before_state_writes(self):
         original = sqlite_bytes()
         (self.path / "paper_forward.db").write_bytes(original)
