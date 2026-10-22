@@ -146,7 +146,7 @@ def latest_restore_event(path=Path("forward_pulse_runs.jsonl"), run_id=None):
 def frame(snapshot, width=118, height=38, color=True):
     """Render a bounded frame; at least one bottom row remains for the cursor."""
     width, height = max(40, min(132, width)), max(12, height)
-    report = snapshot.get("report") or {}
+    report = snapshot.get("report") if isinstance(snapshot.get("report"), dict) else {}
     report_unavailable = not isinstance(snapshot.get("report"), dict)
     rows = []
     def row(text="", style=""):
@@ -288,7 +288,7 @@ class ConsoleDashboard:
     def draw(self, snapshot):
         if not self.interactive:
             # Redirected output is a concise status stream, never repeated full screens.
-            report = snapshot.get("report") or {}
+            report = snapshot.get("report") if isinstance(snapshot.get("report"), dict) else {}
             report_unavailable = not isinstance(snapshot.get("report"), dict)
             invalid = metric_health(report)
             missing = missing_metrics(report)
