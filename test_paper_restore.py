@@ -456,6 +456,38 @@ class TestSafePaperRestore(unittest.TestCase):
         finally:
             os.chdir(cwd)
 
+    def test_nested_storage_redirect_rejected(self):
+        from unittest.mock import Mock, patch
+        listing = Mock()
+        listing.json.return_value = {"total_count": 1, "artifacts": [{
+            "name": "godlike-forward-state", "id": 42, "expired": False,
+            "created_at": "2026-10-14T18:00:00Z",
+            "archive_download_url": "https://api.github.com/repos/rssen-debug/myg2026/actions/artifacts/42/zip",
+            "workflow_run": {"id": 42}
+        }]}
+        redirect = mock.MagicMock()
+        redirect.__enter__.return_value.status_code = 302
+        redirect.__enter__.return_value.headers = {
+            "Location": "https://example.blob.core.windows.net/signed.zip"
+        }
+        nested = mock.MagicMock()
+        nested.__enter__.return_value.status_code = 302
+        cwd = Path.cwd()
+        try:
+            os.chdir(self.path)
+            with patch.dict(os.environ, {
+                "GITHUB_REPOSITORY": "rssen-debug/myg2026",
+                "GITHUB_TOKEN": "synthetic-test-token",
+                "GITHUB_RUN_ID": "43",
+            }), patch("requests.get", side_effect=[listing, redirect, nested]) as getter:
+                with self.assertRaisesRegex(ValueError, "Nested PAPER artifact redirect rejected"):
+                    module.main()
+                self.assertEqual(getter.call_count, 3)
+                self.assertEqual(getter.call_args.kwargs["headers"], {})
+                self.assertFalse(getter.call_args.kwargs["allow_redirects"])
+        finally:
+            os.chdir(cwd)
+
     def test_malformed_ipv6_redirect_rejected_before_download(self):
         from unittest.mock import Mock, patch
         listing = Mock()
