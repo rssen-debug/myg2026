@@ -77,6 +77,24 @@ class TestNonInteractiveQualityStream(unittest.TestCase):
         self.assertEqual(len(output.getvalue().splitlines()), 3)
         self.assertIn("DATA INVALID", output.getvalue().splitlines()[-1])
 
+    def test_cash_and_equity_changes_emit_status_without_duplicate_spam(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        dashboard.draw(data)
+        self.assertIn("CASH $70.00", output.getvalue())
+        self.assertIn("EQUITY $99.00", output.getvalue())
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 1)
+        data["report"]["cash"] = "71"
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 2)
+        self.assertIn("CASH $71.00", output.getvalue().splitlines()[-1])
+        data["report"]["total_port"] = "100"
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 3)
+        self.assertIn("EQUITY $100.00", output.getvalue().splitlines()[-1])
+
     def test_invalid_value_change_and_pause_state_emit_status(self):
         output = io.StringIO()
         dashboard = ConsoleDashboard(stream=output)
