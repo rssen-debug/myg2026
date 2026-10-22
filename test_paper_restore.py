@@ -41,6 +41,17 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_corrupted_btree_rejected_without_overwriting_existing_ledger(self):
+        original = sqlite_bytes()
+        (self.path / "paper_forward.db").write_bytes(original)
+        damaged = bytearray(original)
+        damaged[100:108] = b"\\xff" * 8
+        with self.assertRaises((ValueError, sqlite3.DatabaseError)):
+            module.safe_extract_zip(
+                archive([("paper_forward.db", bytes(damaged))]), self.path
+            )
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
+
     def test_truncated_sqlite_page_is_rejected_before_publish(self):
         original = sqlite_bytes()
         (self.path / "paper_forward.db").write_bytes(original)
