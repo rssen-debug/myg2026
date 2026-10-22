@@ -76,6 +76,20 @@ class TestSafePlainLogFields(unittest.TestCase):
         self.assertIn("QUALITY ALERT", output.getvalue())
         self.assertLess(len(output.getvalue()), 230)
 
+class TestCompactPositionCount(unittest.TestCase):
+    def test_position_count_changes_emit_bounded_status(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        dashboard.draw(data)
+        self.assertIn("POSITIONS 1", output.getvalue())
+        data["positions"] = []
+        dashboard.draw(data)
+        self.assertIn("POSITIONS 0", output.getvalue().splitlines()[-1])
+        self.assertEqual(len(output.getvalue().splitlines()), 2)
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 2)
+
 class TestNonInteractiveQualityStream(unittest.TestCase):
     def test_quality_change_emits_new_line_without_duplicate_spam(self):
         output = io.StringIO()
