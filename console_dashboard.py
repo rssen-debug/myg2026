@@ -308,7 +308,7 @@ class ConsoleDashboard:
                 # Reserve room for positions and discovery instead of truncating them.
                 # Reserve critical status and portfolio figures; truncate only field details.
                 head = (
-                    f"{fit(snapshot.get('updated_at', '--'), 10).strip()} PAPER "
+                    f"{clean(str(snapshot.get('updated_at') or '--'))[:19]} PAPER "
                     f"{status_marker} {'[PAUSED] ' if snapshot.get('entries_paused') else ''}"
                     f"QUALITY {quality} | DATA {freshness} | "
                     f"INVALID {len(invalid)} | MISSING {len(missing)} | "
