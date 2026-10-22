@@ -95,7 +95,8 @@ def frame(snapshot, width=118, height=38, color=True):
     row("◆ FORWARD-DATA  Historisk replay och kodtester bevisar INTE framtida vinst", "33")
     row("◇ HISTORIKSKYDD  [AUDIT] ZIP [SHA256/FAIL-CLOSED] · DB [READ-ONLY-CHECK] · PAGES [AUTO] · IDS [UNIQUE]", "3")
     row("  API [EXACT-URL] · AUDIT [SKIPS-LOGGED] · DB [512MiB]  |  PAPER ONLY", "3")
-    restore = latest_restore_event(run_id=os.getenv("GITHUB_RUN_ID"))
+    current_run_id = os.getenv("GITHUB_RUN_ID")
+    restore = latest_restore_event(run_id=current_run_id) if current_run_id else None
     if restore and restore["status"] == "RESTORED":
         row(f"◆ RESTORE VERIFIED  {restore['status']} | artifact {restore.get('artifact_id') or '--'} | {restore.get('utc', '--')} | PAPER ONLY", "1;36")
     elif restore and restore["status"] == "FIRST_RUN":
