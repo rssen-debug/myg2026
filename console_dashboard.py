@@ -300,8 +300,8 @@ class ConsoleDashboard:
                          tuple(invalid), tuple(missing), freshness, invalid_values, portfolio)
             if signature != self.last_plain_status:
                 self.stream.write(
-                    f"{fit(snapshot.get('updated_at', '--'), 24).strip()} PAPER "
-                    f"{fit(signature[0], 16).strip()} "
+                    f"{fit(snapshot.get('updated_at', '--'), 19).strip()} PAPER "
+                    f"{fit(signature[0], 10).strip()} "
                     f"PnL {money(report.get('net_pnl'), True)} | "
                     f"CASH {portfolio[0]} | EQUITY {portfolio[1]} | "
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
@@ -310,7 +310,7 @@ class ConsoleDashboard:
                     f"DATA {freshness} | INVALID {len(invalid)} "
                     f"[{','.join(invalid[:3]) or '-'}] | MISSING {len(missing)} "
                     f"[{','.join(missing[:3]) or '-'}] "
-                    f"| {fit(snapshot.get('candidates', 0), 8).strip()} tokens\n"
+                    f"| {fit(snapshot.get('candidates', 0), 5).strip()} tok\n"
                 )
                 self.stream.flush()
                 self.last_plain_status = signature
