@@ -97,9 +97,9 @@ def frame(snapshot, width=118, height=38, color=True):
     row("  API [EXACT-URL] · AUDIT [SKIPS-LOGGED] · DB [512MiB]  |  PAPER ONLY", "3")
     restore = latest_restore_event(run_id=os.getenv("GITHUB_RUN_ID"))
     if restore:
-        row(f"◇ RESTORE TRACE  {restore['status']} | artifact {restore.get('artifact_id') or '--'} | {restore.get('utc', '--')} | PAPER ONLY", "36")
+        row(f"◆ RESTORE VERIFIED  {restore['status']} | artifact {restore.get('artifact_id') or '--'} | {restore.get('utc', '--')} | PAPER ONLY", "1;36")
     else:
-        row("◇ RESTORE TRACE  EJ VERIFIERAD | forward_pulse_runs.jsonl | PAPER ONLY", "33")
+        row("◇ RESTORE UNVERIFIED  INGEN BEKRÄFTAD ÅTERSTÄLLNING I DENNA KÖRNING | PAPER ONLY", "1;33")
     as_of = snapshot.get("report_as_of")
     stale = bool(as_of and (datetime.now(timezone.utc)-datetime.fromisoformat(as_of)).total_seconds() > 30)
     row(("VÄRDERING INAKTUELL. Senast: " if stale else "Värderad: ") + str(as_of or "saknas") + " | Lönsamhet EJ verifierad", "33" if stale else "2")
