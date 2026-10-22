@@ -448,6 +448,8 @@ class TestSafePaperRestore(unittest.TestCase):
             with sqlite3.connect(self.path/"paper_forward.db") as c:
                 self.assertEqual(c.execute("SELECT id FROM x").fetchone()[0],42)
             events = [json.loads(s) for s in (self.path/"forward_pulse_runs.jsonl").read_text().splitlines()]
+            self.assertEqual(events[-2]["artifact_id"],20)
+            self.assertEqual(events[-2]["status"],"SKIP_REPORT_ONLY_ARTIFACT")
             self.assertEqual(events[-1]["artifact_id"],10)
             self.assertEqual(events[-1]["status"],"RESTORED")
         finally:
