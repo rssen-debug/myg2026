@@ -352,7 +352,7 @@ def main():
                         raise ValueError("PAPER artifact streamed archive exceeds size limit")
                     chunks.append(chunk)
                 archive_bytes = b"".join(chunks)
-        if not archive_bytes.startswith(b"PK\x03\x04") and not archive_bytes.startswith(b"PK\x05\x06"):
+        if not archive_bytes.startswith(b"PK\x03\x04"):
             raise ValueError("PAPER artifact response is not a ZIP archive")
         expected_digest = candidate.get("digest")
         if expected_digest is not None:
