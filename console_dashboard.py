@@ -45,7 +45,7 @@ def percentage(value):
     return "--" if value is None else f"{Decimal(str(value)):.1f}%"
 
 
-def latest_restore_event(path=Path("forward_pulse_runs.jsonl")):
+def latest_restore_event(path=Path("forward_pulse_runs.jsonl"), run_id=None):
     """Read only the tail of the audit log; never imply a restore succeeded."""
     try:
         with Path(path).open("rb") as stream:
@@ -57,7 +57,8 @@ def latest_restore_event(path=Path("forward_pulse_runs.jsonl")):
                 item = json.loads(line)
             except (ValueError, TypeError):
                 continue
-            if isinstance(item, dict) and item.get("status") in {"RESTORED", "FIRST_RUN"}:
+            if (isinstance(item, dict) and item.get("status") in {"RESTORED", "FIRST_RUN"}
+                    and (run_id is None or str(item.get("run_id")) == str(run_id))):
                 return item
     except (OSError, ValueError):
         pass
@@ -94,7 +95,7 @@ def frame(snapshot, width=118, height=38, color=True):
     row("◆ FORWARD-DATA  Historisk replay och kodtester bevisar INTE framtida vinst", "33")
     row("◇ HISTORIKSKYDD  [AUDIT] ZIP [SHA256/FAIL-CLOSED] · DB [READ-ONLY-CHECK] · PAGES [AUTO] · IDS [UNIQUE]", "3")
     row("  API [EXACT-URL] · AUDIT [SKIPS-LOGGED] · DB [512MiB]  |  PAPER ONLY", "3")
-    restore = latest_restore_event()
+    restore = latest_restore_event(run_id=os.getenv("GITHUB_RUN_ID"))
     if restore:
         row(f"◇ RESTORE TRACE  {restore['status']} | artifact {restore.get('artifact_id') or '--'} | {restore.get('utc', '--')} | PAPER ONLY", "36")
     else:
