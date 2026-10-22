@@ -378,7 +378,11 @@ def main():
             raise
         for skipped_id in skipped_report_ids:
             event("SKIP_REPORT_ONLY_ARTIFACT", artifact_id=skipped_id, detail="missing SQLite")
-        event("RESTORED", artifact_id=candidate["id"], detail=f"{len(restored)} paper state files")
+        event("RESTORED", artifact_id=candidate["id"], detail=(
+            f"{len(restored)} paper state files; "
+            f"sqlite_bytes={Path('paper_forward.db').stat().st_size}; "
+            f"source_run={candidate.get('workflow_run', {}).get('id', 'unknown')}"
+        ))
         print(f"Restored prior paper state artifact ID {candidate['id']}; this is NOT continuous coverage.")
         return
     raise ValueError("Historical artifacts exist but none contains a recoverable paper SQLite database")
