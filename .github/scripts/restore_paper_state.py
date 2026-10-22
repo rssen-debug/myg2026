@@ -286,8 +286,14 @@ def main():
         if declared_size is not None and declared_size > MAX_ARCHIVE_BYTES:
             raise ValueError("PAPER artifact declared size exceeds archive limit")
         archive_url = candidate.get("archive_download_url")
-        if (not isinstance(archive_url, str)
-                or not archive_url.startswith("https://api.github.com/repos/")):
+        from urllib.parse import urlsplit
+        expected_path = (f"/repos/{os.environ['GITHUB_REPOSITORY']}"
+                         f"/actions/artifacts/{candidate['id']}/zip")
+        parsed_api = urlsplit(archive_url) if isinstance(archive_url, str) else None
+        if (parsed_api is None or parsed_api.scheme != "https"
+                or parsed_api.netloc != "api.github.com"
+                or parsed_api.path != expected_path
+                or parsed_api.query or parsed_api.fragment):
             raise ValueError("Invalid PAPER artifact download URL")
         with requests.get(archive_url, headers=headers, timeout=(15, 90),
                           stream=True, allow_redirects=False) as initial:
