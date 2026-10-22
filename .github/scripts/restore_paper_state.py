@@ -107,6 +107,13 @@ def safe_extract_zip(content: bytes, target: Path):
     # rather than silently accepting a potentially stale or incomplete state.
     if recovered["paper_forward.db"][:16] != bytes((83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0)):
         raise ValueError("Invalid paper SQLite header")
+    page_size = int.from_bytes(recovered["paper_forward.db"][16:18], "big")
+    if page_size == 1:
+        page_size = 65536
+    if page_size < 512 or page_size > 65536 or page_size & (page_size - 1):
+        raise ValueError("Invalid paper SQLite page size")
+    if len(recovered["paper_forward.db"]) % page_size:
+        raise ValueError("Truncated paper SQLite page data")
     if 2 in recovered["paper_forward.db"][18:20]:
         raise ValueError("WAL-mode paper database requires a checkpointed snapshot")
     # Validate SQLite in isolation before replacing any existing PAPER state.
