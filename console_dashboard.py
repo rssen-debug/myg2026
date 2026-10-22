@@ -306,7 +306,7 @@ class ConsoleDashboard:
                 # Reserve room for positions and discovery instead of truncating them.
                 prefix = (
                     f"{fit(snapshot.get('updated_at', '--'), 10).strip()} PAPER "
-                    f"{status_marker} QUALITY {quality} ({quality_detail}) | "
+                    f"{status_marker} {'[PAUSED] ' if snapshot.get('entries_paused') else ''}QUALITY {quality} ({quality_detail}) | "
                     f"DATA {freshness} | "
                     f"INVALID {len(invalid)} [{','.join(invalid[:3]) or '-'}] | "
                     f"MISSING {len(missing)} [{','.join(missing[:3]) or '-'}]| "
