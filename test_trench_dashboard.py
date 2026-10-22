@@ -39,6 +39,19 @@ class TestRestoreEventHUD(unittest.TestCase):
             self.assertIsNone(latest_restore_event(log, run_id="new-run"))
             self.assertEqual(latest_restore_event(log, run_id="old-run")["artifact_id"], 7)
 
+    def test_local_dashboard_never_trusts_historical_restore(self):
+        with tempfile.TemporaryDirectory() as folder:
+            log = Path(folder) / "forward_pulse_runs.jsonl"
+            log.write_text(json.dumps({"status": "RESTORED", "artifact_id": 999,
+                                       "run_id": "previous"}) + "\n", encoding="utf-8")
+            with patch.dict("os.environ", {"GITHUB_RUN_ID": ""}), \
+                 patch("console_dashboard.latest_restore_event", return_value={
+                     "status": "RESTORED", "artifact_id": 999}) as reader:
+                output = frame(example(), width=128, height=80, color=False)
+            reader.assert_not_called()
+            self.assertIn("RESTORE UNVERIFIED", output)
+            self.assertNotIn("RESTORE VERIFIED", output)
+
     def test_first_run_never_claims_verified_restore(self):
         with patch("console_dashboard.latest_restore_event",
                    return_value={"status": "FIRST_RUN", "artifact_id": None}):
