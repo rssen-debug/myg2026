@@ -57,9 +57,13 @@ def latest_restore_event(path=Path("forward_pulse_runs.jsonl"), run_id=None):
                 item = json.loads(line)
             except (ValueError, TypeError):
                 continue
-            if (isinstance(item, dict) and item.get("status") in {"RESTORED", "FIRST_RUN"}
-                    and (run_id is None or str(item.get("run_id")) == str(run_id))):
-                return item
+            if not isinstance(item, dict) or item.get("status") not in {"RESTORED", "FIRST_RUN"}:
+                continue
+            if run_id is not None and str(item.get("run_id")) != str(run_id):
+                continue
+            if item["status"] == "RESTORED" and (type(item.get("artifact_id")) is not int or item["artifact_id"] <= 0):
+                continue
+            return item
     except (OSError, ValueError):
         pass
     return None
