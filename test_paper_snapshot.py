@@ -26,6 +26,14 @@ class TestPaperSnapshot(unittest.TestCase):
                     self.assertEqual(snapshot.execute("PRAGMA quick_check").fetchone(), ("ok",))
                     self.assertEqual(snapshot.execute("PRAGMA journal_mode").fetchone(), ("delete",))
 
+    def test_forward_workflow_uploads_only_validated_snapshot(self):
+        workflow = (Path(__file__).parent / ".github" / "workflows" /
+                    "godlike-forward-pulse.yml").read_text(encoding="utf-8")
+        self.assertIn("module.snapshot_paper_db(", workflow)
+        self.assertIn("path: paper_artifact/", workflow)
+        self.assertIn("if: steps.snapshot.outcome == 'success'", workflow)
+        self.assertNotIn("            paper_forward.db\\n", workflow)
+
     def test_special_characters_in_source_path(self):
         for name in ("paper #1.db", "paper %23.db", "paper ?x.db"):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as root:
