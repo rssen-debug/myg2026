@@ -96,8 +96,32 @@ def safe_extract_zip(content: bytes, target: Path):
     with tempfile.TemporaryDirectory(prefix=".paper-restore-stage-", dir=target) as staging:
         for name, data in recovered.items():
             (Path(staging) / name).write_bytes(data)
-        for name in recovered:
-            os.replace(Path(staging) / name, target / name)
+        # Roll back on an ordinary publication error. Power-loss atomicity
+        # across multiple files still requires a versioned directory design.
+        backup = Path(staging) / "previous"
+        backup.mkdir()
+        published = []
+        try:
+            for name in recovered:
+                destination = target / name
+                had_previous = destination.exists()
+                if had_previous:
+                    os.replace(destination, backup / name)
+                try:
+                    os.replace(Path(staging) / name, destination)
+                except OSError:
+                    if had_previous:
+                        os.replace(backup / name, destination)
+                    raise
+                published.append((name, had_previous))
+        except OSError:
+            for name, had_previous in reversed(published):
+                destination = target / name
+                if had_previous:
+                    os.replace(backup / name, destination)
+                else:
+                    destination.unlink(missing_ok=True)
+            raise
     return seen
 
 
