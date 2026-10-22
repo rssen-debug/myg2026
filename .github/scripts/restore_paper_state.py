@@ -57,6 +57,7 @@ def safe_extract_zip(content: bytes, target: Path):
     with zipfile.ZipFile(io.BytesIO(content)) as z:
         seen = set()
         total_size = 0
+        total_compressed = 0
         metadata_size = len(z.comment)
         infos = z.infolist()
         if not infos:
@@ -79,6 +80,11 @@ def safe_extract_zip(content: bytes, target: Path):
                 raise ValueError("Archive member is symlink")
             if info.file_size > (MAX_SQLITE_BYTES if name == "paper_forward.db" else MAX_FILE_BYTES):
                 raise ValueError("Oversized paper file")
+            if info.compress_size < 0 or info.compress_size > MAX_ARCHIVE_BYTES:
+                raise ValueError("Invalid paper ZIP compressed member size")
+            total_compressed += info.compress_size
+            if total_compressed > MAX_ARCHIVE_BYTES:
+                raise ValueError("Oversized total compressed paper ZIP members")
             total_size += info.file_size
             if total_size > MAX_TOTAL_EXTRACT_BYTES:
                 raise ValueError("Oversized total paper extraction")
