@@ -62,6 +62,22 @@ class TestSafePaperRestore(unittest.TestCase):
                 module.main()
         self.assertEqual(requests_stub.get.call_count, 2)
 
+    def test_paginated_artifact_list_requires_both_fields(self):
+        from unittest.mock import Mock
+        import sys
+        for listing in ({"total_count": 0}, {"artifacts": []}):
+            with self.subTest(listing=listing):
+                response = Mock()
+                response.json.return_value = listing
+                requests_stub = Mock()
+                requests_stub.get.return_value = response
+                with mock.patch.dict(os.environ, {
+                    "GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "test-token"
+                }), mock.patch.dict(sys.modules, {"requests": requests_stub}):
+                    with self.assertRaisesRegex(ValueError, "Missing required PAPER artifact listing fields"):
+                        module.main()
+                self.assertEqual(requests_stub.get.call_count, 1)
+
     def test_paginated_artifact_list_rejects_non_object_response(self):
         from unittest.mock import Mock
         import sys
