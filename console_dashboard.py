@@ -71,7 +71,7 @@ def frame(snapshot, width=118, height=38, color=True):
     row("◆ EVIDENSKONTROLL  PAPER MODELL / INTE LIVE-PnL  |  Färska köp- och säljofferter krävs", "1;33")
     row("◆ KAPITALSKYDD  Inga verkliga order / inga privata nycklar / LIVE LÅST", "1;36")
     row("◆ FORWARD-DATA  Historisk replay och kodtester bevisar INTE framtida vinst", "33")
-    row("◆ HISTORIKSKYDD  Återställning valideras före publicering; avbruten körning kräver kontroll", "2")
+    row("◆ HISTORIKSKYDD  Validering + rollback vid vanliga fel  |  Kraschåterställning ej verifierad", "2")
     as_of = snapshot.get("report_as_of")
     stale = bool(as_of and (datetime.now(timezone.utc)-datetime.fromisoformat(as_of)).total_seconds() > 30)
     row(("VÄRDERING INAKTUELL. Senast: " if stale else "Värderad: ") + str(as_of or "saknas") + " | Lönsamhet EJ verifierad", "33" if stale else "2")
