@@ -28,6 +28,20 @@ def example():
     }
 
 
+class TestAlertPriorityHUD(unittest.TestCase):
+    def test_quality_warning_survives_long_truncated_plain_line(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        data["status"] = "R" * 200
+        data["report"]["net_pnl"] = "NaN"
+        dashboard.draw(data)
+        line = output.getvalue()
+        self.assertIn("[!] QUALITY ALERT", line)
+        self.assertIn("DATA MISSING", line)
+        self.assertIn("INVALID 1", line)
+        self.assertLessEqual(len(line), 221)
+
 class TestEllipsisHUD(unittest.TestCase):
     def test_truncated_stage_has_visible_marker(self):
         data = example()
