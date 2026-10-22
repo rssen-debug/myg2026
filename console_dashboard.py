@@ -41,6 +41,13 @@ def money(value, signed=False):
         return "OKÄNT"
 
 
+def missing_metrics(report):
+    """Distinguish unavailable metrics from malformed numeric metrics."""
+    return [key for key in ("net_pnl", "realized_pnl", "unrealized_pnl", "win_rate",
+                            "max_drawdown_pct", "cash", "total_port", "fees",
+                            "profit_factor", "initial_cash") if report.get(key) is None]
+
+
 def metric_health(report):
     """Explicitly surface invalid numeric inputs instead of silently hiding them."""
     invalid = []
@@ -139,7 +146,12 @@ def frame(snapshot, width=118, height=38, color=True):
         row("◆ DATA QUALITY  INVALID METRICS: " + ", ".join(invalid_metrics[:5]) +
             (f" (+{len(invalid_metrics)-5} MORE)" if len(invalid_metrics) > 5 else "") + " | PAPER ONLY", "1;31")
     else:
-        row("◇ DATA QUALITY  NUMERIC FIELDS VALID OR MISSING | PAPER ONLY", "2")
+        missing = missing_metrics(report)
+        if missing:
+            row(f"◇ DATA QUALITY  {len(missing)} MISSING: " + ", ".join(missing[:3]) +
+                (f" (+{len(missing)-3} MORE)" if len(missing) > 3 else "") + " | PAPER ONLY", "1;33")
+        else:
+            row("◆ DATA QUALITY  ALL TRACKED METRICS FINITE | PAPER ONLY", "1;32")
     row("◆ EVIDENSKONTROLL  PAPER MODELL / INTE LIVE-PnL  |  Färska köp- och säljofferter krävs", "1;33")
     row("◆ KAPITALSKYDD  Inga verkliga order / inga privata nycklar / LIVE LÅST", "1;36")
     row("◆ FORWARD-DATA  Historisk replay och kodtester bevisar INTE framtida vinst", "33")
