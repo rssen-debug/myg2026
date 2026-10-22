@@ -76,7 +76,12 @@ def safe_extract_zip(content: bytes, target: Path):
         for info in infos:
             if info.filename not in FILES:
                 continue
-            data = z.read(info)
+            # Bound actual decompressed bytes, not only untrusted ZIP metadata.
+            member_limit = MAX_SQLITE_BYTES if info.filename == "paper_forward.db" else MAX_FILE_BYTES
+            with z.open(info) as member:
+                data = member.read(member_limit + 1)
+                if len(data) > member_limit or member.read(1):
+                    raise ValueError("Oversized paper file during decompression")
             if len(data) != info.file_size:
                 raise ValueError("Paper state member has incorrect size")
             recovered[info.filename] = data
