@@ -403,11 +403,11 @@ class TestSafePaperRestore(unittest.TestCase):
         response_list = Mock()
         response_list.json.return_value = {"total_count": 2, "artifacts": [
             {"name":"godlike-forward-state","id":20,"expired":False,
-             "created_at":"2026-10-14T19:00:00Z","archive_download_url":"https://example.test/20",
+             "created_at":"2026-10-14T19:00:00Z","archive_download_url":"https://api.github.com/repos/rssen-debug/myg2026/actions/artifacts/20",
              "workflow_run":{"id":20}},
             {"name":"godlike-forward-state","id":10,"expired":False,
              "digest":"sha256:" + hashlib.sha256(previous).hexdigest(),
-             "created_at":"2026-10-14T18:00:00Z","archive_download_url":"https://example.test/10",
+             "created_at":"2026-10-14T18:00:00Z","archive_download_url":"https://api.github.com/repos/rssen-debug/myg2026/actions/artifacts/10",
              "workflow_run":{"id":10}},
         ]}
         response_recent = mock.MagicMock()
@@ -439,7 +439,7 @@ class TestSafePaperRestore(unittest.TestCase):
             "name": "godlike-forward-state", "id": 42, "expired": False,
             "size_in_bytes": module.MAX_ARCHIVE_BYTES + 1,
             "created_at": "2026-10-14T18:00:00Z",
-            "archive_download_url": "https://example.test/42",
+            "archive_download_url": "https://api.github.com/repos/rssen-debug/myg2026/actions/artifacts/42",
             "workflow_run": {"id": 42}
         }]}
         cwd = Path.cwd()
@@ -456,13 +456,36 @@ class TestSafePaperRestore(unittest.TestCase):
         finally:
             os.chdir(cwd)
 
+    def test_untrusted_artifact_url_rejected_before_network_request(self):
+        from unittest.mock import Mock, patch
+        listing = Mock()
+        listing.json.return_value = {"total_count": 1, "artifacts": [{
+            "name": "godlike-forward-state", "id": 42, "expired": False,
+            "created_at": "2026-10-14T18:00:00Z",
+            "archive_download_url": "https://evil.example/steal-token",
+            "workflow_run": {"id": 42}
+        }]}
+        cwd = Path.cwd()
+        try:
+            os.chdir(self.path)
+            with patch.dict(os.environ, {
+                "GITHUB_REPOSITORY": "rssen-debug/myg2026",
+                "GITHUB_TOKEN": "synthetic-test-token",
+                "GITHUB_RUN_ID": "43",
+            }), patch("requests.get", return_value=listing) as getter:
+                with self.assertRaisesRegex(ValueError, "Invalid PAPER artifact download URL"):
+                    module.main()
+                self.assertEqual(getter.call_count, 1)
+        finally:
+            os.chdir(cwd)
+
     def test_streaming_download_stops_at_archive_limit(self):
         from unittest.mock import Mock, patch
         listing = Mock()
         listing.json.return_value = {"total_count": 1, "artifacts": [{
             "name": "godlike-forward-state", "id": 42, "expired": False,
             "created_at": "2026-10-14T18:00:00Z",
-            "archive_download_url": "https://example.test/42",
+            "archive_download_url": "https://api.github.com/repos/rssen-debug/myg2026/actions/artifacts/42",
             "workflow_run": {"id": 42}
         }]}
         streamed = mock.MagicMock()
@@ -493,7 +516,7 @@ class TestSafePaperRestore(unittest.TestCase):
             "name": "godlike-forward-state", "id": 42, "expired": False,
             "digest": "sha256:" + "0" * 64,
             "created_at": "2026-10-14T18:00:00Z",
-            "archive_download_url": "https://example.test/42",
+            "archive_download_url": "https://api.github.com/repos/rssen-debug/myg2026/actions/artifacts/42",
             "workflow_run": {"id": 42}
         }]}
         streamed = mock.MagicMock()
