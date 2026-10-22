@@ -227,6 +227,7 @@ def main():
                "X-GitHub-Api-Version":"2022-11-28"}
     url = f"https://api.github.com/repos/{repo}/actions/artifacts"
     artifacts = []
+    seen_artifact_ids = set()
     page = 1
     expected_total = None
     while True:
@@ -246,6 +247,12 @@ def main():
             expected_total = total
         elif total != expected_total:
             raise ValueError("PAPER artifact listing changed during pagination")
+        for item in batch:
+            if not isinstance(item, dict) or type(item.get("id")) is not int or item["id"] <= 0:
+                raise ValueError("Invalid PAPER artifact ID in listing")
+            if item["id"] in seen_artifact_ids:
+                raise ValueError("Duplicate PAPER artifact ID across pages")
+            seen_artifact_ids.add(item["id"])
         artifacts.extend(batch)
         if len(artifacts) >= expected_total:
             if len(artifacts) != expected_total:
