@@ -567,6 +567,34 @@ class TestSafePaperRestore(unittest.TestCase):
         finally:
             os.chdir(cwd)
 
+    def test_redirect_control_character_rejected(self):
+        from unittest.mock import Mock, patch
+        listing = Mock()
+        listing.json.return_value = {"total_count": 1, "artifacts": [{
+            "name": "godlike-forward-state", "id": 42, "expired": False,
+            "created_at": "2026-10-14T18:00:00Z",
+            "archive_download_url": "https://api.github.com/repos/rssen-debug/myg2026/actions/artifacts/42/zip",
+            "workflow_run": {"id": 42}
+        }]}
+        redirect = mock.MagicMock()
+        redirect.__enter__.return_value.status_code = 302
+        redirect.__enter__.return_value.headers = {
+            "Location": "https://example.blob.core.windows.net/zip" + chr(10)
+        }
+        cwd = Path.cwd()
+        try:
+            os.chdir(self.path)
+            with patch.dict(os.environ, {
+                "GITHUB_REPOSITORY": "rssen-debug/myg2026",
+                "GITHUB_TOKEN": "synthetic-test-token",
+                "GITHUB_RUN_ID": "43",
+            }), patch("requests.get", side_effect=[listing, redirect]) as getter:
+                with self.assertRaisesRegex(ValueError, "Unsafe PAPER artifact redirect URL"):
+                    module.main()
+                self.assertEqual(getter.call_count, 2)
+        finally:
+            os.chdir(cwd)
+
     def test_redirect_to_unapproved_public_hostname_rejected(self):
         from unittest.mock import Mock, patch
         listing = Mock()
