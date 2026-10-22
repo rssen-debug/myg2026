@@ -41,6 +41,7 @@ def recognized_report(name):
 
 MAX_FILE_BYTES = 200 * 1024 * 1024
 MAX_SQLITE_BYTES = 512 * 1024 * 1024
+MAX_TOTAL_EXTRACT_BYTES = 768 * 1024 * 1024
 MAX_ARCHIVE_BYTES = 200 * 1024 * 1024
 
 
@@ -51,6 +52,7 @@ def safe_extract_zip(content: bytes, target: Path):
         raise ValueError("Oversized paper state archive")
     with zipfile.ZipFile(io.BytesIO(content)) as z:
         seen = set()
+        total_size = 0
         infos = z.infolist()
         if not infos:
             raise ValueError("Empty state archive")
@@ -63,6 +65,9 @@ def safe_extract_zip(content: bytes, target: Path):
                 raise ValueError("Archive member is symlink")
             if info.file_size > (MAX_SQLITE_BYTES if name == "paper_forward.db" else MAX_FILE_BYTES):
                 raise ValueError("Oversized paper file")
+            total_size += info.file_size
+            if total_size > MAX_TOTAL_EXTRACT_BYTES:
+                raise ValueError("Oversized total paper extraction")
             seen.add(name)
         if "paper_forward.db" not in seen:
             raise ValueError("No paper_forward.db in previous run")
