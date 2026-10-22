@@ -27,6 +27,18 @@ def example():
 
 
 class TestMetricQualityHUD(unittest.TestCase):
+    def test_profit_factor_never_renders_raw_nonfinite_value(self):
+        for value in ("NaN", "Infinity", "garbage"):
+            with self.subTest(value=value):
+                data = example()
+                data["report"]["profit_factor"] = value
+                output = frame(data, width=128, height=80, color=False)
+                self.assertIn("PF --", output)
+                self.assertIn("INVALID METRICS:", output)
+        data = example()
+        data["report"]["profit_factor"] = 1.2345
+        self.assertIn("PF 1.23", frame(data, width=128, height=80, color=False))
+
     def test_invalid_cash_fees_and_profit_factor_are_visible(self):
         data = example()
         for field in ("cash", "fees", "profit_factor"):
