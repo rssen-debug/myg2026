@@ -41,6 +41,24 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_truncated_sqlite_page_is_rejected_before_publish(self):
+        original = sqlite_bytes()
+        (self.path / "paper_forward.db").write_bytes(original)
+        with self.assertRaisesRegex(ValueError, "Truncated paper SQLite page data"):
+            module.safe_extract_zip(
+                archive([("paper_forward.db", original[:-1])]), self.path
+            )
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
+
+    def test_invalid_sqlite_page_size_is_rejected(self):
+        original = sqlite_bytes()
+        damaged = bytearray(original)
+        damaged[16:18] = bytes((3, 0))
+        with self.assertRaisesRegex(ValueError, "Invalid paper SQLite page size"):
+            module.safe_extract_zip(
+                archive([("paper_forward.db", bytes(damaged))]), self.path
+            )
+
     def test_mixed_wal_header_flags_are_rejected(self):
         original = sqlite_bytes()
         (self.path / "paper_forward.db").write_bytes(original)
