@@ -133,6 +133,7 @@ def frame(snapshot, width=118, height=38, color=True):
         row("INGA TRADES: modellfriktion/likvidationsvarde av start-USDC/SOL ar inte handels-PnL.", "33")
     row(f"Start {money(report.get('initial_cash'))}   Kassa {money(report.get('cash'))}   Likvidationsmodell {money(report.get('total_port'))}   Order {money(snapshot.get('trade_budget_usd'))}")
     row(f"Avgifter {money(report.get('fees'))}   Avslutade {report.get('total_trades', 0)}   Win {percentage(report.get('win_rate'))}   PF {ratio(report.get('profit_factor'))}   Max DD {percentage(report.get('max_drawdown_pct'))}")
+    row("◇ METRIC LEGEND  -- / OKÄNT = SAKNAT ELLER OGILTIGT VÄRDE · INTE NOLL | PAPER ONLY", "2")
     invalid_metrics = metric_health(report)
     if invalid_metrics:
         row("◆ DATA QUALITY  INVALID METRICS: " + ", ".join(invalid_metrics[:5]) +
