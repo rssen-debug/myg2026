@@ -276,7 +276,9 @@ class ConsoleDashboard:
                 self.stream.write(
                     f"{clean(snapshot.get('updated_at', '--'))} PAPER {clean(signature[0])} "
                     f"PnL {money(report.get('net_pnl'), True)} | "
-                    f"DATA {freshness} | INVALID {len(invalid)} | MISSING {len(missing)} "
+                    f"DATA {freshness} | INVALID {len(invalid)} "
+                    f"[{','.join(invalid[:3]) or '-'}] | MISSING {len(missing)} "
+                    f"[{','.join(missing[:3]) or '-'}] "
                     f"| {snapshot.get('candidates', 0)} tokens\n"
                 )
                 self.stream.flush()
