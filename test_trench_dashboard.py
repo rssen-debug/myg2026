@@ -170,14 +170,17 @@ class TestQualityReasonLabel(unittest.TestCase):
         data = example()
         data["report_as_of"] = "bad-timestamp"
         dashboard.draw(data)
-        self.assertIn("QUALITY ALERT (VALUATION INVALID)", output.getvalue())
+        self.assertIn("QUALITY ALERT | DATA INVALID", output.getvalue())
+        self.assertIn("VALUATION INVALID", output.getvalue())
         data["report"]["net_pnl"] = "NaN"
         dashboard.draw(data)
-        self.assertIn("QUALITY ALERT (INVALID DATA)", output.getvalue().splitlines()[-1])
+        self.assertIn("QUALITY ALERT", output.getvalue().splitlines()[-1])
+        self.assertIn("INVALID DATA", output.getvalue().splitlines()[-1])
         data["report"]["net_pnl"] = "-1.00"
         data["report_as_of"] = datetime.now(timezone.utc).isoformat()
         dashboard.draw(data)
-        self.assertIn("QUALITY PARTIAL (MISSING FIELDS)", output.getvalue().splitlines()[-1])
+        self.assertIn("QUALITY PARTIAL", output.getvalue().splitlines()[-1])
+        self.assertIn("MISSING FIELDS", output.getvalue().splitlines()[-1])
 
 class TestCompactPausedStatus(unittest.TestCase):
     def test_paused_entries_are_visible_at_start_of_plain_log(self):
@@ -267,7 +270,8 @@ class TestNonInteractiveQualityStream(unittest.TestCase):
         data["report"]["win_rate"] = None
         dashboard.draw(data)
         line = output.getvalue()
-        self.assertIn("INVALID 4 [net_pnl,cash,fees]", line)
+        self.assertIn("INVALID 4", line)
+        self.assertIn("BAD [net_pnl,cash,fees]", line)
         self.assertIn("MISSING", line)
         self.assertIn("win_rate", line)
         self.assertNotIn("initial_cash]", line)
