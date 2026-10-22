@@ -315,6 +315,8 @@ def main():
                         or parsed.username or parsed.password or parsed.fragment
                         or redirect_port not in (None, 443)
                         or hostname == "localhost" or hostname.endswith(".localhost")
+                        or hostname.endswith((".local", ".internal", ".test", ".invalid"))
+                        or "." not in hostname
                         or (address is not None and not address.is_global)):
                     raise ValueError("Unsafe PAPER artifact redirect URL")
                 # GitHub returns a signed storage URL; never forward the GitHub token.
