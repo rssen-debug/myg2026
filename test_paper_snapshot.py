@@ -26,6 +26,17 @@ class TestPaperSnapshot(unittest.TestCase):
                     self.assertEqual(snapshot.execute("PRAGMA quick_check").fetchone(), ("ok",))
                     self.assertEqual(snapshot.execute("PRAGMA journal_mode").fetchone(), ("delete",))
 
+    def test_special_characters_in_source_path(self):
+        for name in ("paper #1.db", "paper %23.db", "paper ?x.db"):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as root:
+                source, dest = Path(root) / name, Path(root) / "snapshot.db"
+                with sqlite3.connect(source) as db:
+                    db.execute("CREATE TABLE t (id INTEGER)")
+                    db.execute("INSERT INTO t VALUES (7)")
+                module.snapshot_paper_db(source, dest)
+                with sqlite3.connect(dest) as copied:
+                    self.assertEqual(copied.execute("SELECT id FROM t").fetchone(), (7,))
+
     def test_existing_destination_not_overwritten(self):
         with tempfile.TemporaryDirectory() as root:
             source, dest = Path(root) / "source.db", Path(root) / "snapshot.db"
