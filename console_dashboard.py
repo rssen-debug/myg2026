@@ -70,6 +70,7 @@ def frame(snapshot, width=118, height=38, color=True):
     row(f"Avgifter {money(report.get('fees'))}   Avslutade {report.get('total_trades', 0)}   Win {percentage(report.get('win_rate'))}   PF {report.get('profit_factor') or '--'}   Max DD {percentage(report.get('max_drawdown_pct'))}")
     row("◆ EVIDENSKONTROLL  PAPER MODELL / INTE LIVE-PnL  |  Färska köp- och säljofferter krävs", "1;33")
     row("◆ KAPITALSKYDD  Inga verkliga order / inga privata nycklar / LIVE LÅST", "1;36")
+    row("◆ FORWARD-DATA  Historisk replay och kodtester bevisar INTE framtida vinst", "33")
     as_of = snapshot.get("report_as_of")
     stale = bool(as_of and (datetime.now(timezone.utc)-datetime.fromisoformat(as_of)).total_seconds() > 30)
     row(("VÄRDERING INAKTUELL. Senast: " if stale else "Värderad: ") + str(as_of or "saknas") + " | Lönsamhet EJ verifierad", "33" if stale else "2")
