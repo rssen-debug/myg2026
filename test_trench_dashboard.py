@@ -182,6 +182,16 @@ class TestQualityReasonLabel(unittest.TestCase):
         self.assertIn("QUALITY PARTIAL", output.getvalue().splitlines()[-1])
         self.assertIn("MISSING FIELDS", output.getvalue().splitlines()[-1])
 
+class TestPausedEntryBanner(unittest.TestCase):
+    def test_paused_entries_prominent_but_positions_not_claimed_closed(self):
+        data = example()
+        data["entries_paused"] = True
+        output = frame(data, width=118, height=14, color=False)
+        self.assertIn("ENTRY PAUSE ACTIVE", output)
+        self.assertIn("ÖPPNA POSITIONER KAN FINNAS", output)
+        data["entries_paused"] = False
+        self.assertNotIn("ENTRY PAUSE ACTIVE", frame(data, width=118, height=14, color=False))
+
 class TestCompactPausedStatus(unittest.TestCase):
     def test_paused_entries_are_visible_at_start_of_plain_log(self):
         import io
