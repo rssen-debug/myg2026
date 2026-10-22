@@ -6,6 +6,7 @@ import sqlite3
 import stat
 import tempfile
 import unittest
+from unittest import mock
 import zipfile
 from pathlib import Path
 import importlib.util
@@ -39,6 +40,17 @@ class TestSafePaperRestore(unittest.TestCase):
         self.path=Path(self.temp.name)
     def tearDown(self):
         self.temp.cleanup()
+
+    def test_total_uncompressed_archive_limit_rejects_before_writes(self):
+        original = sqlite_bytes()
+        (self.path / "paper_forward.db").write_bytes(original)
+        with mock.patch.object(module, "MAX_TOTAL_EXTRACT_BYTES", len(original) + 4):
+            with self.assertRaisesRegex(ValueError, "Oversized total paper extraction"):
+                module.safe_extract_zip(archive([
+                    ("paper_forward.db", original),
+                    ("paper_forward.log", b"12345"),
+                ]), self.path)
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
 
     def test_sqlite_has_separate_larger_limit(self):
         self.assertGreater(module.MAX_SQLITE_BYTES, module.MAX_FILE_BYTES)
