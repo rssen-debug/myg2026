@@ -164,8 +164,8 @@ def frame(snapshot, width=118, height=38, color=True):
     row(f"Start {money(report.get('initial_cash'))}   Kassa {money(report.get('cash'))}   Likvidationsmodell {money(report.get('total_port'))}   Order {money(snapshot.get('trade_budget_usd'))}")
     row(f"Avgifter {money(report.get('fees'))}   Avslutade {report.get('total_trades', 0)}   Win {percentage(report.get('win_rate'))}   PF {ratio(report.get('profit_factor'))}   Max DD {percentage(report.get('max_drawdown_pct'))}")
     row("◇ METRIC LEGEND  -- / OKÄNT = SAKNAT ELLER OGILTIGT VÄRDE · INTE NOLL | PAPER ONLY", "2")
-    invalid_metrics = metric_health(report)
-    missing = missing_metrics(report)
+    invalid_metrics = summary_invalid
+    missing = summary_missing
     if invalid_metrics:
         row("◆ DATA QUALITY  INVALID METRICS: " + ", ".join(invalid_metrics[:5]) +
             (f" (+{len(invalid_metrics)-5} MORE)" if len(invalid_metrics) > 5 else "") + " | PAPER ONLY", "1;31")
@@ -190,7 +190,7 @@ def frame(snapshot, width=118, height=38, color=True):
     else:
         row("◇ RESTORE UNVERIFIED  ○ SAKNAR BEVIS FÖR AKTUELL RUN-ID | PAPER ONLY", "1;33")
     as_of = snapshot.get("report_as_of")
-    freshness = valuation_freshness(as_of)
+    freshness = summary_freshness
     if freshness == "FRESH":
         row("◆ VÄRDERING FÄRSK  " + str(as_of) + " | Lönsamhet EJ verifierad", "1;36")
     else:
