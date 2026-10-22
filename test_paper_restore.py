@@ -141,6 +141,24 @@ class TestSafePaperRestore(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"unsafe"):
             module.safe_extract_zip(archive([("paper_forward.db",sqlite_bytes()),("paper_forward.db",sqlite_bytes())]),self.path)
 
+    def test_publish_failure_rolls_back_previous_files(self):
+        original = sqlite_bytes()
+        (self.path / "paper_forward.db").write_bytes(original)
+        (self.path / "paper_forward.settings.json").write_bytes(b"old")
+        real_replace = os.replace
+        def fail_publish(src, dst):
+            if Path(src).name == "paper_forward.settings.json" and ".paper-restore-stage-" in str(src) and Path(dst).parent == self.path:
+                raise OSError("simulated publish failure")
+            return real_replace(src, dst)
+        with mock.patch.object(module.os, "replace", side_effect=fail_publish):
+            with self.assertRaisesRegex(OSError, "simulated publish failure"):
+                module.safe_extract_zip(archive([
+                    ("paper_forward.db", original),
+                    ("paper_forward.settings.json", b"new"),
+                ]), self.path)
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
+        self.assertEqual((self.path / "paper_forward.settings.json").read_bytes(), b"old")
+
     def test_staging_write_failure_preserves_existing_state(self):
         original = sqlite_bytes()
         (self.path / "paper_forward.db").write_bytes(original)
