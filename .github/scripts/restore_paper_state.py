@@ -103,6 +103,12 @@ def safe_extract_zip(content: bytes, target: Path):
             if len(data) != info.file_size:
                 raise ValueError("Paper state member has incorrect size")
             recovered[info.filename] = data
+    # A SQLite DB without its WAL is not a complete snapshot. Fail closed
+    # rather than silently accepting a potentially stale or incomplete state.
+    if recovered["paper_forward.db"][:16] != bytes((83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0)):
+        raise ValueError("Invalid paper SQLite header")
+    if recovered["paper_forward.db"][18:20] == bytes((2, 2)):
+        raise ValueError("WAL-mode paper database requires a checkpointed snapshot")
     # Validate SQLite in isolation before replacing any existing PAPER state.
     with tempfile.TemporaryDirectory(prefix="paper-restore-") as scratch:
         db = Path(scratch) / "paper_forward.db"
