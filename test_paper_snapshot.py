@@ -71,6 +71,42 @@ class TestPaperSnapshot(unittest.TestCase):
             with sqlite3.connect(restored / "paper_forward.db") as db:
                 self.assertEqual(db.execute("SELECT value FROM t").fetchone(), ("PAPER",))
 
+    def test_snapshot_full_integrity_check_failure_preserves_destination(self):
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as root:
+            source, dest = Path(root) / "source.db", Path(root) / "snapshot.db"
+            with sqlite3.connect(source) as db:
+                db.execute("CREATE TABLE evidence (value TEXT)")
+                db.execute("INSERT INTO evidence VALUES ('PAPER')")
+            original_connect = module.sqlite3.connect
+
+            class RejectIntegrity:
+                def __init__(self, conn):
+                    self.conn = conn
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *args):
+                    self.conn.close()
+
+                def execute(self, sql, *args):
+                    if sql == "PRAGMA integrity_check":
+                        return self.conn.execute("SELECT 'corrupt'")
+                    return self.conn.execute(sql, *args)
+
+            def connect(path, *args, **kwargs):
+                conn = original_connect(path, *args, **kwargs)
+                if Path(str(path)).name.startswith(".paper-snapshot-"):
+                    return RejectIntegrity(conn)
+                return conn
+
+            with mock.patch.object(module.sqlite3, "connect", side_effect=connect):
+                with self.assertRaisesRegex(ValueError, "integrity_check"):
+                    module.snapshot_paper_db(source, dest)
+            self.assertFalse(dest.exists())
+            self.assertEqual(list(Path(root).glob(".paper-snapshot-*")), [])
+
     def test_backup_contains_committed_wal_rows(self):
         with tempfile.TemporaryDirectory() as root:
             source, dest = Path(root) / "source.db", Path(root) / "snapshot.db"
