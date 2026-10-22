@@ -301,9 +301,13 @@ def main():
                 from urllib.parse import urlsplit
                 redirected_url = initial.headers.get("Location", "")
                 parsed = urlsplit(redirected_url)
+                try:
+                    redirect_port = parsed.port
+                except ValueError as exc:
+                    raise ValueError("Unsafe PAPER artifact redirect URL") from exc
                 if (parsed.scheme != "https" or not parsed.hostname
                         or parsed.username or parsed.password or parsed.fragment
-                        or parsed.port not in (None, 443)):
+                        or redirect_port not in (None, 443)):
                     raise ValueError("Unsafe PAPER artifact redirect URL")
                 # GitHub returns a signed storage URL; never forward the GitHub token.
                 download_url, download_headers = redirected_url, {}
