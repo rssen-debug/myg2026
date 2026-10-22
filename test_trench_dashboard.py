@@ -28,6 +28,20 @@ def example():
     }
 
 
+class TestPriorityLogOrder(unittest.TestCase):
+    def test_data_quality_precedes_portfolio_in_bounded_log(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        data["report"]["net_pnl"] = "NaN"
+        data["report"]["win_rate"] = None
+        dashboard.draw(data)
+        line = output.getvalue()
+        self.assertLess(line.index("DATA MISSING"), line.index("PnL"))
+        self.assertLess(line.index("INVALID 1"), line.index("CASH"))
+        self.assertIn("net_pnl", line)
+        self.assertLessEqual(len(line.rstrip("\\n")), 220)
+
 class TestAlertPriorityHUD(unittest.TestCase):
     def test_quality_warning_survives_long_truncated_plain_line(self):
         output = io.StringIO()
