@@ -1,5 +1,6 @@
 """Adversarial archive-restoration checks. No network and no real trading."""
 import io
+import hashlib
 import json
 import os
 import sqlite3
