@@ -276,13 +276,15 @@ class ConsoleDashboard:
                          tuple(invalid), tuple(missing), freshness, invalid_values)
             if signature != self.last_plain_status:
                 self.stream.write(
-                    f"{clean(snapshot.get('updated_at', '--'))} PAPER {clean(signature[0])} "
+                    f"{fit(snapshot.get('updated_at', '--'), 32).strip()} PAPER "
+                    f"{fit(signature[0], 24).strip()} "
                     f"PnL {money(report.get('net_pnl'), True)} | "
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
+                    f"QUALITY {'ALERT' if invalid or freshness != 'FRESH' else 'PARTIAL' if missing else 'OK'} | "
                     f"DATA {freshness} | INVALID {len(invalid)} "
                     f"[{','.join(invalid[:3]) or '-'}] | MISSING {len(missing)} "
                     f"[{','.join(missing[:3]) or '-'}] "
-                    f"| {snapshot.get('candidates', 0)} tokens\n"
+                    f"| {fit(snapshot.get('candidates', 0), 12).strip()} tokens\n"
                 )
                 self.stream.flush()
                 self.last_plain_status = signature
