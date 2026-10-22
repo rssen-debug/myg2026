@@ -27,6 +27,14 @@ def example():
 
 
 class TestMetricQualityHUD(unittest.TestCase):
+    def test_invalid_cash_fees_and_profit_factor_are_visible(self):
+        data = example()
+        for field in ("cash", "fees", "profit_factor"):
+            data["report"][field] = "Infinity"
+        self.assertEqual(metric_health(data["report"]), ["cash", "fees", "profit_factor"])
+        output = frame(data, width=128, height=80, color=False)
+        self.assertIn("INVALID METRICS: cash, fees, profit_factor", output)
+
     def test_dynamic_data_quality_indicator(self):
         healthy = frame(example(), width=128, height=80, color=False)
         self.assertIn("DATA QUALITY  NUMERIC FIELDS VALID OR MISSING", healthy)
