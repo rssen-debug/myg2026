@@ -41,6 +41,21 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_paginated_artifact_list_fails_closed(self):
+        from unittest.mock import Mock
+        import sys
+        response = Mock()
+        response.json.return_value = {"total_count": 101, "artifacts": []}
+        response.raise_for_status.return_value = None
+        requests_stub = Mock()
+        requests_stub.get.return_value = response
+        with mock.patch.dict(os.environ, {
+            "GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "test-token"
+        }), mock.patch.dict(sys.modules, {"requests": requests_stub}):
+            with self.assertRaisesRegex(ValueError, "paginated"):
+                module.main()
+        self.assertEqual(requests_stub.get.call_count, 1)
+
     def test_regular_file_restore_root_is_rejected_unchanged(self):
         root = self.path / "state-root"
         root.write_bytes(b"existing root")
