@@ -146,7 +146,8 @@ def latest_restore_event(path=Path("forward_pulse_runs.jsonl"), run_id=None):
 def frame(snapshot, width=118, height=38, color=True):
     """Render a bounded frame; at least one bottom row remains for the cursor."""
     width, height = max(40, min(132, width)), max(12, height)
-    report = snapshot.get("report", {})
+    report = snapshot.get("report") or {}
+    report_unavailable = not isinstance(snapshot.get("report"), dict)
     rows = []
     def row(text="", style=""):
         body = fit(text, width-4)
@@ -169,6 +170,8 @@ def frame(snapshot, width=118, height=38, color=True):
     summary_freshness = valuation_freshness(snapshot.get("report_as_of"))
     row(f"◆ STATUS  DATA {summary_freshness}  |  FEL {len(summary_invalid)}  |  SAKNAS {len(summary_missing)}  |  PAPER ONLY",
         "1;31" if summary_invalid or summary_freshness != "FRESH" else "1;33" if summary_missing else "1;36")
+    if report_unavailable:
+        row("◆ REPORT MISSING  |  INGEN GILTIG EKONOMISK RAPPORT · PAPER ONLY", "1;31")
     rows.append(rule)
     pnl = report.get("net_pnl")
     try:
@@ -286,6 +289,7 @@ class ConsoleDashboard:
         if not self.interactive:
             # Redirected output is a concise status stream, never repeated full screens.
             report = snapshot.get("report") or {}
+            report_unavailable = not isinstance(snapshot.get("report"), dict)
             invalid = metric_health(report)
             missing = missing_metrics(report)
             freshness = valuation_freshness(snapshot.get("report_as_of"))
@@ -295,14 +299,14 @@ class ConsoleDashboard:
             # Track key portfolio values even when their validity does not change.
             # Only bounded summaries are emitted, never raw untrusted values.
             portfolio = (money(report.get("cash")), money(report.get("total_port")))
-            quality = "ALERT" if invalid or freshness != "FRESH" else "PARTIAL" if missing else "OK"
-            quality_detail = ("INVALID DATA" if invalid else "VALUATION " + freshness) if quality == "ALERT" else ("MISSING FIELDS" if missing else "FINITE METRICS ONLY")
+            quality = "ALERT" if report_unavailable or invalid or freshness != "FRESH" else "PARTIAL" if missing else "OK"
+            quality_detail = ("REPORT MISSING" if report_unavailable else "INVALID DATA" if invalid else "VALUATION " + freshness) if quality == "ALERT" else ("MISSING FIELDS" if missing else "FINITE METRICS ONLY")
             # Make safety-relevant changes visible without claiming the trading engine is paused.
             status_marker = "[!]" if quality == "ALERT" else "[?]" if quality == "PARTIAL" else "[+]"
             signature = (clean(snapshot.get("status")), bool(snapshot.get("entries_paused")),
                          money(report.get("net_pnl"), True), len(snapshot.get("positions") or []),
                          tuple(invalid), tuple(missing), freshness, invalid_values, portfolio,
-                         snapshot.get("candidates", 0))
+                         snapshot.get("candidates", 0), report_unavailable)
             if signature != self.last_plain_status:
                 # Put actionable counts first and preserve the tail even at 220 columns.
                 # Reserve room for positions and discovery instead of truncating them.
