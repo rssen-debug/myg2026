@@ -456,6 +456,35 @@ class TestSafePaperRestore(unittest.TestCase):
         finally:
             os.chdir(cwd)
 
+    def test_redirect_to_private_network_rejected(self):
+        from unittest.mock import Mock, patch
+        listing = Mock()
+        listing.json.return_value = {"total_count": 1, "artifacts": [{
+            "name": "godlike-forward-state", "id": 42, "expired": False,
+            "created_at": "2026-10-14T18:00:00Z",
+            "archive_download_url": "https://api.github.com/repos/rssen-debug/myg2026/actions/artifacts/42/zip",
+            "workflow_run": {"id": 42}
+        }]}
+        for destination in ("https://127.0.0.1/zip", "https://10.0.0.5/zip",
+                            "https://localhost/zip", "https://[::1]/zip"):
+            with self.subTest(destination=destination):
+                redirect = mock.MagicMock()
+                redirect.__enter__.return_value.status_code = 302
+                redirect.__enter__.return_value.headers = {"Location": destination}
+                cwd = Path.cwd()
+                try:
+                    os.chdir(self.path)
+                    with patch.dict(os.environ, {
+                        "GITHUB_REPOSITORY": "rssen-debug/myg2026",
+                        "GITHUB_TOKEN": "synthetic-test-token",
+                        "GITHUB_RUN_ID": "43",
+                    }), patch("requests.get", side_effect=[listing, redirect]) as getter:
+                        with self.assertRaisesRegex(ValueError, "Unsafe PAPER artifact redirect URL"):
+                            module.main()
+                        self.assertEqual(getter.call_count, 2)
+                finally:
+                    os.chdir(cwd)
+
     def test_redirect_invalid_port_rejected_before_storage_request(self):
         from unittest.mock import Mock, patch
         listing = Mock()
