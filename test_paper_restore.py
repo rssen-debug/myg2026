@@ -141,6 +141,24 @@ class TestSafePaperRestore(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"unsafe"):
             module.safe_extract_zip(archive([("paper_forward.db",sqlite_bytes()),("paper_forward.db",sqlite_bytes())]),self.path)
 
+    def test_staging_write_failure_preserves_existing_state(self):
+        original = sqlite_bytes()
+        (self.path / "paper_forward.db").write_bytes(original)
+        (self.path / "paper_forward.settings.json").write_bytes(b"original")
+        real_write = Path.write_bytes
+        def fail_settings(path, data):
+            if path.name == "paper_forward.settings.json" and ".paper-restore-stage-" in str(path):
+                raise OSError("simulated disk full")
+            return real_write(path, data)
+        with mock.patch.object(Path, "write_bytes", autospec=True, side_effect=fail_settings):
+            with self.assertRaisesRegex(OSError, "simulated disk full"):
+                module.safe_extract_zip(archive([
+                    ("paper_forward.db", original),
+                    ("paper_forward.settings.json", b"new"),
+                ]), self.path)
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
+        self.assertEqual((self.path / "paper_forward.settings.json").read_bytes(), b"original")
+
     def test_corrupt_db_never_overwrites_existing_state(self):
         original = sqlite_bytes()
         (self.path / "paper_forward.db").write_bytes(original)
