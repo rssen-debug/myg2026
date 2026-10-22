@@ -430,6 +430,30 @@ class TestSafePaperRestore(unittest.TestCase):
         finally:
             os.chdir(cwd)
 
+    def test_oversized_artifact_metadata_rejected_before_download(self):
+        from unittest.mock import Mock, patch
+        listing = Mock()
+        listing.json.return_value = {"total_count": 1, "artifacts": [{
+            "name": "godlike-forward-state", "id": 42, "expired": False,
+            "size_in_bytes": module.MAX_ARCHIVE_BYTES + 1,
+            "created_at": "2026-10-14T18:00:00Z",
+            "archive_download_url": "https://example.test/42",
+            "workflow_run": {"id": 42}
+        }]}
+        cwd = Path.cwd()
+        try:
+            os.chdir(self.path)
+            with patch.dict(os.environ, {
+                "GITHUB_REPOSITORY": "rssen-debug/myg2026",
+                "GITHUB_TOKEN": "synthetic-test-token",
+                "GITHUB_RUN_ID": "43",
+            }), patch("requests.get", return_value=listing) as getter:
+                with self.assertRaisesRegex(ValueError, "declared size exceeds"):
+                    module.main()
+                self.assertEqual(getter.call_count, 1)
+        finally:
+            os.chdir(cwd)
+
     def test_artifact_digest_mismatch_preserves_existing_state(self):
         from unittest.mock import Mock, patch
         original = sqlite_bytes()
