@@ -293,6 +293,7 @@ class ConsoleDashboard:
             # Only bounded summaries are emitted, never raw untrusted values.
             portfolio = (money(report.get("cash")), money(report.get("total_port")))
             quality = "ALERT" if invalid or freshness != "FRESH" else "PARTIAL" if missing else "OK"
+            quality_detail = ("INVALID DATA" if invalid else "VALUATION " + freshness) if quality == "ALERT" else ("MISSING FIELDS" if missing else "VERIFIED FIELDS")
             # Make safety-relevant changes visible without claiming the trading engine is paused.
             status_marker = "[!]" if quality == "ALERT" else "[?]" if quality == "PARTIAL" else "[+]"
             signature = (snapshot.get("status"), snapshot.get("entries_paused"),
@@ -307,7 +308,7 @@ class ConsoleDashboard:
                     f"CASH {portfolio[0]} | EQUITY {portfolio[1]} | "
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
                     f"POSITIONS {len(snapshot.get('positions') or [])} | "
-                    f"{status_marker} QUALITY {quality} | "
+                    f"{status_marker} QUALITY {quality} ({quality_detail}) | "
                     f"DATA {freshness} | INVALID {len(invalid)} "
                     f"[{','.join(invalid[:3]) or '-'}] | MISSING {len(missing)} "
                     f"[{','.join(missing[:3]) or '-'}] "
