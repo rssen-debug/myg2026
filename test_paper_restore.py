@@ -521,7 +521,7 @@ class TestSafePaperRestore(unittest.TestCase):
             "archive_download_url": "https://api.github.com/repos/rssen-debug/myg2026/actions/artifacts/42/zip",
             "workflow_run": {"id": 42}
         }]}
-        for destination in ("https://metadata.internal/zip", "https://printer.local/zip",
+        for destination in ("https://github.com/zip", "https://metadata.internal/zip", "https://printer.local/zip",
                             "https://intranet/zip"):
             with self.subTest(destination=destination):
                 redirect = mock.MagicMock()
