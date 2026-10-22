@@ -55,7 +55,7 @@ class TestLiveLockedTailHUD(unittest.TestCase):
         data["status"] = "X" * 500
         data["report"]["net_pnl"] = "NaN"
         dashboard.draw(data)
-        line = output.getvalue().rstrip("\\n")
+        line = output.getvalue().rstrip()
         self.assertTrue(line.endswith("LIVE LOCKED"))
         self.assertIn("[!] QUALITY ALERT", line)
         self.assertLessEqual(len(line), 220)
