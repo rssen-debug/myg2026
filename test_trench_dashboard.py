@@ -166,6 +166,28 @@ class TestQualityReasonLabel(unittest.TestCase):
         dashboard.draw(data)
         self.assertIn("QUALITY PARTIAL (MISSING FIELDS)", output.getvalue().splitlines()[-1])
 
+class TestCompactPausedStatus(unittest.TestCase):
+    def test_paused_entries_are_visible_at_start_of_plain_log(self):
+        import io
+        from console_dashboard import ConsoleDashboard
+        data = example()
+        data["entries_paused"] = True
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        dashboard.draw(data)
+        self.assertIn("[PAUSED] QUALITY", output.getvalue())
+        self.assertIn("ENTRIES PAUSED", output.getvalue())
+        self.assertLessEqual(len(output.getvalue().splitlines()[0]), 220)
+
+    def test_missing_positions_does_not_crash_plain_log(self):
+        import io
+        from console_dashboard import ConsoleDashboard
+        data = example()
+        data["positions"] = None
+        output = io.StringIO()
+        ConsoleDashboard(stream=output).draw(data)
+        self.assertIn("POSITIONS 0", output.getvalue())
+
 class TestNonInteractiveQualityStream(unittest.TestCase):
     def test_quality_change_emits_new_line_without_duplicate_spam(self):
         output = io.StringIO()
