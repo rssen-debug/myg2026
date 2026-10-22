@@ -58,7 +58,7 @@ def frame(snapshot, width=118, height=38, color=True):
     model = "JUPITER-OFFERTER" if snapshot.get("execution_model") == "quote" else "POOLMODELL"
     row(f"GODLIKE  /  SOLANA TRADING DESK       PAPER {model}  |  LIVE LÅST", "1;36")
     paused = snapshot.get("entries_paused", False)
-    row(f"{snapshot.get('status', 'STARTING')}  |  Köp {'PAUSADE' if paused else 'AKTIVA'}  |  {snapshot.get('updated_at', '--')}  |  PID {snapshot.get('pid', '--')}")
+    row(f"● PAPER ONLY  /  LIVE LOCKED  |  {snapshot.get('status', 'STARTING')}  |  Köp {'PAUSADE' if paused else 'AKTIVA'}  |  {snapshot.get('updated_at', '--')}  |  PID {snapshot.get('pid', '--')}")
     row(snapshot.get("stage", "Startar..."), "2")
     rows.append(rule)
     pnl = report.get("net_pnl")
