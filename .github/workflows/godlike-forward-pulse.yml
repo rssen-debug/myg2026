@@ -147,6 +147,7 @@ jobs:
         with:
           name: godlike-forward-state
           path: paper_artifact/
-          if-no-files-found: warn
+          if-no-files-found: error
+          compression-level: 1
           retention-days: 60
           overwrite: true
