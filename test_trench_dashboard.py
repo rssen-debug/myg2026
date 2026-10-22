@@ -51,9 +51,9 @@ class TestNonInteractiveQualityStream(unittest.TestCase):
         output = io.StringIO()
         dashboard = ConsoleDashboard(stream=output)
         data = example()
-        data["status"] = "\\x1b[31mRUNNING"
+        data["status"] = chr(27) + "[31mRUNNING"
         dashboard.draw(data)
-        self.assertNotIn("\\x1b", output.getvalue())
+        self.assertNotIn(chr(27), output.getvalue())
         self.assertIn("PAPER", output.getvalue())
 
 class TestCompactStatusHUD(unittest.TestCase):
