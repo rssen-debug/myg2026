@@ -307,11 +307,11 @@ class ConsoleDashboard:
                     f"DATA {freshness} | INVALID {len(invalid)} "
                     f"[{','.join(invalid[:3]) or '-'}] | MISSING {len(missing)} "
                     f"[{','.join(missing[:3]) or '-'}] | "
+                    f"POSITIONS {len(snapshot.get('positions') or [])} | "
+                    f"{fit(snapshot.get('candidates', 0), 5).strip()} tok | "
                     f"PnL {money(report.get('net_pnl'), True)} | "
                     f"CASH {portfolio[0]} | EQUITY {portfolio[1]} | "
-                    f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
-                    f"POSITIONS {len(snapshot.get('positions') or [])} | "
-                    f"{fit(snapshot.get('candidates', 0), 5).strip()} tok"
+                    f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'}"
                 , 220).rstrip() + "\n")
                 self.stream.flush()
                 self.last_plain_status = signature
