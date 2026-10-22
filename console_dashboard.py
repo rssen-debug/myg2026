@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from decimal import Decimal
+from pathlib import Path
+import json
 import os
 import shutil
 import sys
@@ -43,6 +45,25 @@ def percentage(value):
     return "--" if value is None else f"{Decimal(str(value)):.1f}%"
 
 
+def latest_restore_event(path=Path("forward_pulse_runs.jsonl")):
+    """Read only the tail of the audit log; never imply a restore succeeded."""
+    try:
+        with Path(path).open("rb") as stream:
+            stream.seek(0, 2)
+            stream.seek(max(0, stream.tell() - 8192))
+            tail = stream.read().decode("utf-8", errors="replace").splitlines()
+        for line in reversed(tail):
+            try:
+                item = json.loads(line)
+            except (ValueError, TypeError):
+                continue
+            if isinstance(item, dict) and item.get("status") in {"RESTORED", "FIRST_RUN"}:
+                return item
+    except (OSError, ValueError):
+        pass
+    return None
+
+
 def frame(snapshot, width=118, height=38, color=True):
     """Render a bounded frame; at least one bottom row remains for the cursor."""
     width, height = max(40, min(132, width)), max(12, height)
@@ -73,7 +94,11 @@ def frame(snapshot, width=118, height=38, color=True):
     row("◆ FORWARD-DATA  Historisk replay och kodtester bevisar INTE framtida vinst", "33")
     row("◇ HISTORIKSKYDD  [AUDIT] ZIP [SHA256/FAIL-CLOSED] · DB [READ-ONLY-CHECK] · PAGES [AUTO] · IDS [UNIQUE]", "3")
     row("  API [EXACT-URL] · AUDIT [SKIPS-LOGGED] · DB [512MiB]  |  PAPER ONLY", "3")
-    row("◇ RESTORE TRACE  SQLite-byteantal + källkörning sparas i forward_pulse_runs.jsonl", "36")
+    restore = latest_restore_event()
+    if restore:
+        row(f"◇ RESTORE TRACE  {restore['status']} | artifact {restore.get('artifact_id') or '--'} | {restore.get('utc', '--')} | PAPER ONLY", "36")
+    else:
+        row("◇ RESTORE TRACE  EJ VERIFIERAD I DENNA MILJÖ | PAPER ONLY", "33")
     as_of = snapshot.get("report_as_of")
     stale = bool(as_of and (datetime.now(timezone.utc)-datetime.fromisoformat(as_of)).total_seconds() > 30)
     row(("VÄRDERING INAKTUELL. Senast: " if stale else "Värderad: ") + str(as_of or "saknas") + " | Lönsamhet EJ verifierad", "33" if stale else "2")
