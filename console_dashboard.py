@@ -317,7 +317,7 @@ class ConsoleDashboard:
                     f"QUALITY {quality} | DATA {freshness} | "
                     f"HEALTH {max(0, 10-len(invalid)-len(missing))}/10 | "
                     f"INVALID {len(invalid)} | MISSING {len(missing)} | "
-                    f"FIRST BAD {invalid[0] if invalid else '-'} | "
+                    f"FIRST BAD {invalid[0] if invalid else '-'} | {quality_detail} | "
                 )
                 tail = (
                     f"PnL {money(report.get('net_pnl'), True)} | CASH {portfolio[0]} | "
@@ -327,7 +327,6 @@ class ConsoleDashboard:
                     f"{fit(snapshot.get('candidates', 0), 5).strip()} tok | LIVE LOCKED"
                 )
                 detail = (
-                    f"{quality_detail} "
                     f"BAD [{','.join(invalid[:3]) or '-'}] "
                     f"MISS [{','.join(missing[:3]) or '-'}] | "
                 )
