@@ -248,6 +248,9 @@ def main():
                 or len(batch) > 100):
             raise ValueError("Invalid PAPER artifact pagination response")
         if expected_total is None:
+            # Hard ceiling: prevent unbounded API traffic from malformed counts.
+            if total > 10000:
+                raise ValueError("PAPER artifact listing exceeds safety limit")
             expected_total = total
         elif total != expected_total:
             raise ValueError("PAPER artifact listing changed during pagination")
