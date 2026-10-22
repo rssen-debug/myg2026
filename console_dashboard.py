@@ -289,14 +289,18 @@ class ConsoleDashboard:
             freshness = valuation_freshness(snapshot.get("report_as_of"))
             # Detect changed invalid numeric inputs without logging their raw values.
             invalid_values = tuple((key, str(report.get(key))[:80]) for key in invalid)
+            # Track key portfolio values even when their validity does not change.
+            # Only bounded summaries are emitted, never raw untrusted values.
+            portfolio = (money(report.get("cash")), money(report.get("total_port")))
             signature = (snapshot.get("status"), snapshot.get("entries_paused"),
                          str(report.get("net_pnl")), len(snapshot.get("positions", [])),
-                         tuple(invalid), tuple(missing), freshness, invalid_values)
+                         tuple(invalid), tuple(missing), freshness, invalid_values, portfolio)
             if signature != self.last_plain_status:
                 self.stream.write(
                     f"{fit(snapshot.get('updated_at', '--'), 32).strip()} PAPER "
                     f"{fit(signature[0], 24).strip()} "
                     f"PnL {money(report.get('net_pnl'), True)} | "
+                    f"CASH {portfolio[0]} | EQUITY {portfolio[1]} | "
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
                     f"QUALITY {'ALERT' if invalid or freshness != 'FRESH' else 'PARTIAL' if missing else 'OK'} | "
                     f"DATA {freshness} | INVALID {len(invalid)} "
