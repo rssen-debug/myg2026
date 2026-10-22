@@ -41,6 +41,21 @@ def money(value, signed=False):
         return "OKÄNT"
 
 
+def metric_health(report):
+    """Explicitly surface invalid numeric inputs instead of silently hiding them."""
+    invalid = []
+    for key in ("net_pnl", "realized_pnl", "unrealized_pnl", "win_rate", "max_drawdown_pct"):
+        value = report.get(key)
+        if value is None:
+            continue
+        try:
+            if not Decimal(str(value)).is_finite():
+                invalid.append(key)
+        except (ValueError, ArithmeticError):
+            invalid.append(key)
+    return invalid
+
+
 def percentage(value):
     try:
         number = Decimal(str(value)) if value is not None else None
@@ -109,6 +124,11 @@ def frame(snapshot, width=118, height=38, color=True):
         row("INGA TRADES: modellfriktion/likvidationsvarde av start-USDC/SOL ar inte handels-PnL.", "33")
     row(f"Start {money(report.get('initial_cash'))}   Kassa {money(report.get('cash'))}   Likvidationsmodell {money(report.get('total_port'))}   Order {money(snapshot.get('trade_budget_usd'))}")
     row(f"Avgifter {money(report.get('fees'))}   Avslutade {report.get('total_trades', 0)}   Win {percentage(report.get('win_rate'))}   PF {report.get('profit_factor') or '--'}   Max DD {percentage(report.get('max_drawdown_pct'))}")
+    invalid_metrics = metric_health(report)
+    if invalid_metrics:
+        row("◆ DATA QUALITY  INVALID METRICS: " + ", ".join(invalid_metrics[:5]) + " | PAPER ONLY", "1;31")
+    else:
+        row("◇ DATA QUALITY  NUMERIC FIELDS VALID OR MISSING | PAPER ONLY", "2")
     row("◆ EVIDENSKONTROLL  PAPER MODELL / INTE LIVE-PnL  |  Färska köp- och säljofferter krävs", "1;33")
     row("◆ KAPITALSKYDD  Inga verkliga order / inga privata nycklar / LIVE LÅST", "1;36")
     row("◆ FORWARD-DATA  Historisk replay och kodtester bevisar INTE framtida vinst", "33")
