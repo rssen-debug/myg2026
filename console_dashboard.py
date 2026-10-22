@@ -159,6 +159,8 @@ def frame(snapshot, width=118, height=38, color=True):
     row(f"GODLIKE  /  SOLANA TRADING DESK       PAPER {model}  |  LIVE LÅST", "1;36")
     paused = snapshot.get("entries_paused", False)
     row(f"● PAPER ONLY  /  LIVE LOCKED  |  {snapshot.get('status', 'STARTING')}  |  Köp {'PAUSADE' if paused else 'AKTIVA'}  |  {snapshot.get('updated_at', '--')}  |  PID {snapshot.get('pid', '--')}")
+    if paused:
+        row("◆ ENTRY PAUSE ACTIVE  |  INGA NYA KÖP  |  ÖPPNA POSITIONER KAN FINNAS  |  PAPER ONLY", "1;33")
     row(fit_ellipsis(snapshot.get("stage", "Startar..."), width-4), "2")
     # Pin safety-critical telemetry above the height crop, inspired by
     # Rich's visible-region approach; no extra dependency or refresh thread.
