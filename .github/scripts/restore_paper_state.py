@@ -313,6 +313,7 @@ def main():
                     address = None
                 if (parsed.scheme != "https" or not hostname
                         or parsed.username or parsed.password or parsed.fragment
+                        or not parsed.path or parsed.path == "/"
                         or redirect_port not in (None, 443)
                         or hostname == "localhost" or hostname.endswith(".localhost")
                         or hostname.endswith((".local", ".internal", ".test", ".invalid"))
