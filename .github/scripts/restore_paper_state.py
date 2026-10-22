@@ -93,6 +93,7 @@ def safe_extract_zip(content: bytes, target: Path):
             raise ValueError("No paper_forward.db in previous run")
         # Extract to memory first, so validation occurs before touching state.
         recovered = {}
+        actual_total = 0
         for info in infos:
             if info.filename not in FILES:
                 continue
@@ -106,6 +107,9 @@ def safe_extract_zip(content: bytes, target: Path):
                     if not chunk:
                         break
                     actual_bytes += len(chunk)
+                    actual_total += len(chunk)
+                    if actual_total > MAX_TOTAL_EXTRACT_BYTES:
+                        raise ValueError("Oversized total paper extraction during decompression")
                     if actual_bytes > member_limit:
                         raise ValueError("Oversized paper file during decompression")
                     chunks.append(chunk)
@@ -184,7 +188,7 @@ def safe_extract_zip(content: bytes, target: Path):
                 else:
                     destination.unlink(missing_ok=True)
             raise
-    return seen
+    return set(recovered)
 
 
 def event(status, artifact_id=None, detail=None):
