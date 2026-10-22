@@ -43,7 +43,7 @@ class TestTrenchMoonbagHUD(unittest.TestCase):
         self.assertIn("KAPITALSKYDD", output)
         self.assertIn("FORWARD-DATA", output)
         self.assertIn("HISTORIKSKYDD", output)
-        self.assertIn("[AUDIT] ZIP [SHA256?] · DB [FULL-CHECK] · PAGES [AUTO] · IDS [UNIQUE]", output)
+        self.assertIn("[AUDIT] ZIP [SHA256/FAIL-CLOSED] · DB [FULL-CHECK] · PAGES [AUTO] · IDS [UNIQUE]", output)
         self.assertIn("API [SCHEMA-GUARD] · BACKUP [RETAIN] · CI [NODE24]  |  MAIN: EJ DRIFTSATT", output)
         self.assertIn("Färska köp- och säljofferter", output)
 
