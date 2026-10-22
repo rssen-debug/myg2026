@@ -3,6 +3,7 @@ import unittest
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from console_dashboard import frame, latest_restore_event
 from paper_runtime import render_dashboard
@@ -37,6 +38,20 @@ class TestRestoreEventHUD(unittest.TestCase):
                                        "run_id": "old-run"}) + "\n", encoding="utf-8")
             self.assertIsNone(latest_restore_event(log, run_id="new-run"))
             self.assertEqual(latest_restore_event(log, run_id="old-run")["artifact_id"], 7)
+
+    def test_first_run_never_claims_verified_restore(self):
+        with patch("console_dashboard.latest_restore_event",
+                   return_value={"status": "FIRST_RUN", "artifact_id": None}):
+            output = frame(example(), width=128, height=80, color=False)
+        self.assertIn("RESTORE FIRST RUN", output)
+        self.assertNotIn("RESTORE VERIFIED", output)
+
+    def test_restored_state_is_distinct_from_first_run(self):
+        with patch("console_dashboard.latest_restore_event",
+                   return_value={"status": "RESTORED", "artifact_id": 42}):
+            output = frame(example(), width=128, height=80, color=False)
+        self.assertIn("RESTORE VERIFIED", output)
+        self.assertIn("artifact 42", output)
 
     def test_reads_latest_real_restore_event(self):
         with tempfile.TemporaryDirectory() as folder:
