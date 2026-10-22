@@ -300,8 +300,8 @@ def main():
             if initial.status_code in (301, 302, 303, 307, 308):
                 from urllib.parse import urlsplit
                 redirected_url = initial.headers.get("Location", "")
-                parsed = urlsplit(redirected_url)
                 try:
+                    parsed = urlsplit(redirected_url)
                     redirect_port = parsed.port
                 except ValueError as exc:
                     raise ValueError("Unsafe PAPER artifact redirect URL") from exc
