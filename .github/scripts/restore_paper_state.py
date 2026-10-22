@@ -318,8 +318,7 @@ def main():
                         or hostname.endswith((".local", ".internal", ".test", ".invalid"))
                         or "." not in hostname
                         or (address is not None and not address.is_global)
-                        or not (hostname == "github.com"
-                                or hostname.endswith(".actions.githubusercontent.com")
+                        or not (hostname.endswith(".actions.githubusercontent.com")
                                 or hostname.endswith(".blob.core.windows.net"))):
                     raise ValueError("Unsafe PAPER artifact redirect URL")
                 # GitHub returns a signed storage URL; never forward the GitHub token.
