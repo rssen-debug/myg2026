@@ -62,6 +62,27 @@ class TestSafePaperRestore(unittest.TestCase):
                 module.main()
         self.assertEqual(requests_stub.get.call_count, 2)
 
+    def test_paginated_artifact_list_rejects_duplicate_ids(self):
+        from unittest.mock import Mock
+        import sys
+        first = Mock()
+        first.json.return_value = {"total_count": 101, "artifacts": [
+            {"id": i + 1, "name": "godlike-forward-state", "expired": True}
+            for i in range(100)
+        ]}
+        second = Mock()
+        second.json.return_value = {"total_count": 101, "artifacts": [
+            {"id": 100, "name": "godlike-forward-state", "expired": True}
+        ]}
+        requests_stub = Mock()
+        requests_stub.get.side_effect = [first, second]
+        with mock.patch.dict(os.environ, {
+            "GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "test-token"
+        }), mock.patch.dict(sys.modules, {"requests": requests_stub}):
+            with self.assertRaisesRegex(ValueError, "Duplicate PAPER artifact ID"):
+                module.main()
+        self.assertEqual(requests_stub.get.call_count, 2)
+
     def test_paginated_artifact_list_reads_second_page(self):
         from unittest.mock import Mock
         import sys
