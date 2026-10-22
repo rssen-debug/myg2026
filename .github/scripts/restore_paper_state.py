@@ -160,6 +160,9 @@ def safe_extract_zip(content: bytes, target: Path):
     # Never follow a symlink supplied as the restore root.
     if target.is_symlink():
         raise ValueError("Paper restore target must not be a symlink")
+    # Refuse a non-directory root before publishing anything.
+    if target.exists() and not target.is_dir():
+        raise ValueError("Paper restore target must be a directory")
     # Stage all members before replacing existing PAPER state.
     target.mkdir(parents=True, exist_ok=True)
     # Reject both live and dangling links before moving any existing state.
