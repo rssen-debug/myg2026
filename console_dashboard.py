@@ -142,6 +142,13 @@ def frame(snapshot, width=118, height=38, color=True):
     paused = snapshot.get("entries_paused", False)
     row(f"● PAPER ONLY  /  LIVE LOCKED  |  {snapshot.get('status', 'STARTING')}  |  Köp {'PAUSADE' if paused else 'AKTIVA'}  |  {snapshot.get('updated_at', '--')}  |  PID {snapshot.get('pid', '--')}")
     row(snapshot.get("stage", "Startar..."), "2")
+    # Pin safety-critical telemetry above the height crop, inspired by
+    # Rich's visible-region approach; no extra dependency or refresh thread.
+    summary_invalid = metric_health(report)
+    summary_missing = missing_metrics(report)
+    summary_freshness = valuation_freshness(snapshot.get("report_as_of"))
+    row(f"◆ STATUS  DATA {summary_freshness}  |  FEL {len(summary_invalid)}  |  SAKNAS {len(summary_missing)}  |  PAPER ONLY",
+        "1;31" if summary_invalid or summary_freshness != "FRESH" else "1;33" if summary_missing else "1;36")
     rows.append(rule)
     pnl = report.get("net_pnl")
     try:
