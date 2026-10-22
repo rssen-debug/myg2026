@@ -240,8 +240,10 @@ def main():
         listing = response.json()
         if not isinstance(listing, dict):
             raise ValueError("Invalid PAPER artifact pagination response")
-        batch = listing.get("artifacts", [])
-        total = listing.get("total_count")
+        if "artifacts" not in listing or "total_count" not in listing:
+            raise ValueError("Missing required PAPER artifact listing fields")
+        batch = listing["artifacts"]
+        total = listing["total_count"]
         if (type(total) is not int or total < 0 or not isinstance(batch, list)
                 or len(batch) > 100):
             raise ValueError("Invalid PAPER artifact pagination response")
