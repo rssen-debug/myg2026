@@ -22,6 +22,8 @@ jobs:
         run: python -m compileall -q .
       - name: Run actual checked-in offline tests
         run: python godlike2026.py --unit-tests
+      - name: Explicit PAPER restore, snapshot and dashboard regression tests
+        run: python -m unittest -v test_paper_restore test_paper_snapshot test_trench_dashboard
       - name: Verify LIVE is rejected by main CLI
         shell: bash
         run: |
