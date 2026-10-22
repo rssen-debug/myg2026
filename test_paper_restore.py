@@ -467,6 +467,8 @@ class TestSafePaperRestore(unittest.TestCase):
             self.assertEqual(events[-2]["status"],"SKIP_REPORT_ONLY_ARTIFACT")
             self.assertEqual(events[-1]["artifact_id"],10)
             self.assertEqual(events[-1]["status"],"RESTORED")
+            self.assertIn("sqlite_bytes=", events[-1]["detail"])
+            self.assertIn("source_run=10", events[-1]["detail"])
         finally:
             os.chdir(cwd)
 
