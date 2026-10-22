@@ -152,7 +152,7 @@ def safe_extract_zip(content: bytes, target: Path):
         db = Path(scratch) / "paper_forward.db"
         db.write_bytes(recovered["paper_forward.db"])
         try:
-            with sqlite3.connect(db) as c:
+            with sqlite3.connect(f"{db.as_uri()}?mode=ro", uri=True) as c:
                 integrity = c.execute("PRAGMA integrity_check").fetchone()
                 if not integrity or integrity[0] != "ok":
                     raise ValueError("Restored paper SQLite full integrity check failed")
