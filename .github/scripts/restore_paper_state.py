@@ -68,6 +68,8 @@ def safe_extract_zip(content: bytes, target: Path):
             name = info.filename
             if not (name in FILES or recognized_report(name)) or name in seen or info.is_dir():
                 raise ValueError("Unexpected, repeated, or unsafe archive member")
+            if info.flag_bits & 0x1:
+                raise ValueError("Encrypted paper ZIP member is not supported")
             mode = info.external_attr >> 16
             if stat.S_ISLNK(mode):
                 raise ValueError("Archive member is symlink")
