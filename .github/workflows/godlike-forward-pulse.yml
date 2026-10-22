@@ -76,7 +76,7 @@ jobs:
           assert vals.get("TOKEN2022_METADATA_PAPER_EXPERIMENT") == "False", "Token-2022 research model unexpectedly enabled"
           assert hashlib.sha256(json.dumps(vals, sort_keys=True).encode()).hexdigest() == settings["sha256"], "Paper settings hash mismatch"
           with sqlite3.connect("file:paper_forward.db?mode=ro", uri=True) as conn:
-              assert conn.execute("PRAGMA quick_check").fetchone()[0] == "ok", "SQLite integrity error"
+              assert conn.execute("PRAGMA integrity_check").fetchone()[0] == "ok", "SQLite integrity error"
           print("PAPER mode and SQLite integrity independently checked.")
           PY
 
