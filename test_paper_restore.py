@@ -456,6 +456,31 @@ class TestSafePaperRestore(unittest.TestCase):
         finally:
             os.chdir(cwd)
 
+    def test_empty_zip_artifact_response_rejected(self):
+        from unittest.mock import Mock, patch
+        listing = Mock()
+        listing.json.return_value = {"total_count": 1, "artifacts": [{
+            "name": "godlike-forward-state", "id": 42, "expired": False,
+            "created_at": "2026-10-14T18:00:00Z",
+            "archive_download_url": "https://api.github.com/repos/rssen-debug/myg2026/actions/artifacts/42/zip",
+            "workflow_run": {"id": 42}
+        }]}
+        response = mock.MagicMock()
+        response.__enter__.return_value.status_code = 200
+        response.__enter__.return_value.iter_content.return_value = [archive([])]
+        cwd = Path.cwd()
+        try:
+            os.chdir(self.path)
+            with patch.dict(os.environ, {
+                "GITHUB_REPOSITORY": "rssen-debug/myg2026",
+                "GITHUB_TOKEN": "synthetic-test-token",
+                "GITHUB_RUN_ID": "43",
+            }), patch("requests.get", side_effect=[listing, response]):
+                with self.assertRaisesRegex(ValueError, "not a ZIP archive"):
+                    module.main()
+        finally:
+            os.chdir(cwd)
+
     def test_non_zip_artifact_response_rejected(self):
         from unittest.mock import Mock, patch
         listing = Mock()
