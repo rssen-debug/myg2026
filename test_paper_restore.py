@@ -430,6 +430,33 @@ class TestSafePaperRestore(unittest.TestCase):
         finally:
             os.chdir(cwd)
 
+    def test_artifact_digest_mismatch_preserves_existing_state(self):
+        from unittest.mock import Mock, patch
+        original = sqlite_bytes()
+        (self.path / "paper_forward.db").write_bytes(original)
+        zipped = archive([("paper_forward.db", sqlite_bytes())])
+        listing = Mock()
+        listing.json.return_value = {"total_count": 1, "artifacts": [{
+            "name": "godlike-forward-state", "id": 42, "expired": False,
+            "digest": "sha256:" + "0" * 64,
+            "created_at": "2026-10-14T18:00:00Z",
+            "archive_download_url": "https://example.test/42",
+            "workflow_run": {"id": 42}
+        }]}
+        cwd = Path.cwd()
+        try:
+            os.chdir(self.path)
+            with patch.dict(os.environ, {
+                "GITHUB_REPOSITORY": "rssen-debug/myg2026",
+                "GITHUB_TOKEN": "synthetic-test-token",
+                "GITHUB_RUN_ID": "43",
+            }), patch("requests.get", side_effect=[listing, Mock(content=zipped)]):
+                with self.assertRaisesRegex(ValueError, "SHA256 digest mismatch"):
+                    module.main()
+            self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
+        finally:
+            os.chdir(cwd)
+
     def test_missing_database_rejected(self):
         with self.assertRaisesRegex(ValueError,"No paper_forward.db"):
             module.safe_extract_zip(archive([("paper_forward.log",b"log")]),self.path)
