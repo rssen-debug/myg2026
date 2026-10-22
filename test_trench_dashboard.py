@@ -41,6 +41,7 @@ class TestTrenchMoonbagHUD(unittest.TestCase):
         output = frame(example(), width=128, height=80, color=False)
         self.assertIn("EVIDENSKONTROLL  PAPER MODELL / INTE LIVE-PnL", output)
         self.assertIn("KAPITALSKYDD", output)
+        self.assertIn("FORWARD-DATA", output)
         self.assertIn("Färska köp- och säljofferter", output)
 
     def test_without_trench_metrics_hud_does_not_invent_evidence(self):
