@@ -142,16 +142,15 @@ def frame(snapshot, width=118, height=38, color=True):
     row(f"Avgifter {money(report.get('fees'))}   Avslutade {report.get('total_trades', 0)}   Win {percentage(report.get('win_rate'))}   PF {ratio(report.get('profit_factor'))}   Max DD {percentage(report.get('max_drawdown_pct'))}")
     row("◇ METRIC LEGEND  -- / OKÄNT = SAKNAT ELLER OGILTIGT VÄRDE · INTE NOLL | PAPER ONLY", "2")
     invalid_metrics = metric_health(report)
+    missing = missing_metrics(report)
     if invalid_metrics:
         row("◆ DATA QUALITY  INVALID METRICS: " + ", ".join(invalid_metrics[:5]) +
             (f" (+{len(invalid_metrics)-5} MORE)" if len(invalid_metrics) > 5 else "") + " | PAPER ONLY", "1;31")
-    else:
-        missing = missing_metrics(report)
-        if missing:
-            row(f"◇ DATA QUALITY  {len(missing)} MISSING: " + ", ".join(missing[:3]) +
-                (f" (+{len(missing)-3} MORE)" if len(missing) > 3 else "") + " | PAPER ONLY", "1;33")
-        else:
-            row("◆ DATA QUALITY  ALL TRACKED METRICS FINITE | PAPER ONLY", "1;32")
+    if missing:
+        row(f"◇ DATA QUALITY  {len(missing)} MISSING: " + ", ".join(missing[:3]) +
+            (f" (+{len(missing)-3} MORE)" if len(missing) > 3 else "") + " | PAPER ONLY", "1;33")
+    if not invalid_metrics and not missing:
+        row("◆ DATA QUALITY  ALL TRACKED METRICS FINITE | PAPER ONLY", "1;32")
     row("◆ EVIDENSKONTROLL  PAPER MODELL / INTE LIVE-PnL  |  Färska köp- och säljofferter krävs", "1;33")
     row("◆ KAPITALSKYDD  Inga verkliga order / inga privata nycklar / LIVE LÅST", "1;36")
     row("◆ FORWARD-DATA  Historisk replay och kodtester bevisar INTE framtida vinst", "33")
