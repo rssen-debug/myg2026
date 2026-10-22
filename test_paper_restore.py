@@ -41,6 +41,18 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_directory_destination_is_rejected_before_any_state_publish(self):
+        existing = self.path / "paper_forward.db"
+        existing.mkdir()
+        sentinel = existing / "keep.txt"
+        sentinel.write_text("untouched", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "destination must be a regular file"):
+            module.safe_extract_zip(
+                archive([("paper_forward.db", sqlite_bytes())]), self.path
+            )
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "untouched")
+        self.assertTrue(existing.is_dir())
+
     def test_symlink_destination_file_is_rejected_without_external_writes(self):
         outside = self.path / "outside.db"
         original = sqlite_bytes()
