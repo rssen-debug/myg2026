@@ -39,8 +39,8 @@ class TestTrenchMoonbagHUD(unittest.TestCase):
 
     def test_dashboard_persistently_labels_paper_evidence(self):
         output = frame(example(), width=128, height=80, color=False)
-        self.assertIn("EVIDENS: PAPER MODELL / INTE LIVE-PnL", output)
-        self.assertIn("färska köp- och säljofferter", output)
+        self.assertIn("EVIDENSKONTROLL  PAPER MODELL / INTE LIVE-PnL", output)
+        self.assertIn("Färska köp- och säljofferter", output)
 
     def test_without_trench_metrics_hud_does_not_invent_evidence(self):
         data=example()
