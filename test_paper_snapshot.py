@@ -38,6 +38,39 @@ class TestPaperSnapshot(unittest.TestCase):
                 self.assertEqual(conn.execute("SELECT mode FROM evidence").fetchone(), ("PAPER",))
                 self.assertEqual(conn.execute("PRAGMA quick_check").fetchone(), ("ok",))
 
+    def test_restore_verifies_manifest_and_rejects_tampering(self):
+        import hashlib
+        import io
+        import json
+        import zipfile
+        restore_path = Path(__file__).parent / ".github" / "scripts" / "restore_paper_state.py"
+        restore_spec = importlib.util.spec_from_file_location("paper_restore_manifest", restore_path)
+        restore = importlib.util.module_from_spec(restore_spec)
+        restore_spec.loader.exec_module(restore)
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            source = root / "source.db"
+            with sqlite3.connect(source) as db:
+                db.execute("CREATE TABLE t (value TEXT)")
+                db.execute("INSERT INTO t VALUES ('PAPER')")
+            content = source.read_bytes()
+            manifest = {"format": 1, "database": "paper_forward.db", "bytes": len(content),
+                        "sha256": hashlib.sha256(content).hexdigest()}
+            def archive(meta):
+                stream = io.BytesIO()
+                with zipfile.ZipFile(stream, "w", zipfile.ZIP_DEFLATED) as z:
+                    z.writestr("paper_forward.db", content)
+                    z.writestr("snapshot_manifest.json", json.dumps(meta))
+                return stream.getvalue()
+            restored = root / "restored"
+            restore.safe_extract_zip(archive(manifest), restored)
+            self.assertFalse((restored / "snapshot_manifest.json").exists())
+            bad = dict(manifest, sha256="0" * 64)
+            with self.assertRaisesRegex(ValueError, "manifest mismatch"):
+                restore.safe_extract_zip(archive(bad), restored)
+            with sqlite3.connect(restored / "paper_forward.db") as db:
+                self.assertEqual(db.execute("SELECT value FROM t").fetchone(), ("PAPER",))
+
     def test_backup_contains_committed_wal_rows(self):
         with tempfile.TemporaryDirectory() as root:
             source, dest = Path(root) / "source.db", Path(root) / "snapshot.db"
