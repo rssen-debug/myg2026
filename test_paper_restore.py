@@ -41,6 +41,17 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_encrypted_member_rejected_before_state_writes(self):
+        original = sqlite_bytes()
+        (self.path / "paper_forward.db").write_bytes(original)
+        payload = bytearray(archive([("paper_forward.db", original)]))
+        central = payload.find(b"PK\\x01\\x02")
+        self.assertGreaterEqual(central, 0)
+        payload[central + 8] |= 0x01  # Central-directory encryption flag
+        with self.assertRaisesRegex(ValueError, "Encrypted paper ZIP member"):
+            module.safe_extract_zip(bytes(payload), self.path)
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
+
     def test_zip_metadata_budget_rejects_before_state_writes(self):
         original = sqlite_bytes()
         (self.path / "paper_forward.db").write_bytes(original)
