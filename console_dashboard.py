@@ -304,14 +304,14 @@ class ConsoleDashboard:
                 self.stream.write(fit_ellipsis(
                     f"{fit(snapshot.get('updated_at', '--'), 19).strip()} PAPER "
                     f"{status_marker} QUALITY {quality} ({quality_detail}) | "
+                    f"DATA {freshness} | INVALID {len(invalid)} "
+                    f"[{','.join(invalid[:3]) or '-'}] | MISSING {len(missing)} "
+                    f"[{','.join(missing[:3]) or '-'}] | "
                     f"PnL {money(report.get('net_pnl'), True)} | "
                     f"CASH {portfolio[0]} | EQUITY {portfolio[1]} | "
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
                     f"POSITIONS {len(snapshot.get('positions') or [])} | "
                     f"{fit(snapshot.get('candidates', 0), 5).strip()} tok | "
-                    f"DATA {freshness} | INVALID {len(invalid)} "
-                    f"[{','.join(invalid[:3]) or '-'}] | MISSING {len(missing)} "
-                    f"[{','.join(missing[:3]) or '-'}] | "
                     f"{fit(signature[0], 10).strip()}"
                 , 220).rstrip() + "\n")
                 self.stream.flush()
