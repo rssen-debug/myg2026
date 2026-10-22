@@ -40,6 +40,19 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_sqlite_has_separate_larger_limit(self):
+        self.assertGreater(module.MAX_SQLITE_BYTES, module.MAX_FILE_BYTES)
+        self.assertEqual(module.MAX_ARCHIVE_BYTES, 200 * 1024 * 1024)
+
+    def test_large_sqlite_header_allowed_but_other_members_rejected(self):
+        from unittest.mock import patch
+        # Test boundary logic without allocating hundreds of megabytes.
+        with patch.object(module, "MAX_FILE_BYTES", 32), patch.object(module, "MAX_SQLITE_BYTES", 65536):
+            database = sqlite_bytes()
+            module.safe_extract_zip(archive([("paper_forward.db", database)]), self.path)
+            with self.assertRaisesRegex(ValueError, "Oversized paper file"):
+                module.safe_extract_zip(archive([("paper_forward.db", database), ("paper_forward.log", b"x" * 33)]), self.path)
+
     def test_valid_archive_retains_database(self):
         data=sqlite_bytes()
         result=module.safe_extract_zip(archive([("paper_forward.db",data)]),self.path)
