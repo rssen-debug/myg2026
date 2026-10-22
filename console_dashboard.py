@@ -316,7 +316,7 @@ class ConsoleDashboard:
                 suffix = (
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
                     f"POSITIONS {len(snapshot.get('positions') or [])} | "
-                    f"{fit(snapshot.get('candidates', 0), 5).strip()} tok"
+                    f"{fit(snapshot.get('candidates', 0), 5).strip()} tok | LIVE LOCKED"
                 )
                 budget = max(0, 220 - len(clean(suffix)) - 1)
                 self.stream.write(fit_ellipsis(prefix, budget).rstrip() + " " + clean(suffix) + "\n")
