@@ -47,6 +47,24 @@ class TestNonInteractiveQualityStream(unittest.TestCase):
         self.assertEqual(len(output.getvalue().splitlines()), 3)
         self.assertIn("DATA INVALID", output.getvalue().splitlines()[-1])
 
+    def test_invalid_value_change_and_pause_state_emit_status(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        data["report"]["fees"] = "NaN"
+        dashboard.draw(data)
+        self.assertIn("ENTRIES ACTIVE", output.getvalue())
+        data["report"]["fees"] = "Infinity"
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 2)
+        self.assertNotIn("Infinity", output.getvalue())
+        data["entries_paused"] = True
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 3)
+        self.assertIn("ENTRIES PAUSED", output.getvalue().splitlines()[-1])
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 3)
+
     def test_log_names_fields_and_limits_output(self):
         output = io.StringIO()
         dashboard = ConsoleDashboard(stream=output)
