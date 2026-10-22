@@ -239,6 +239,21 @@ class TestAuditTimestampVisibility(unittest.TestCase):
         self.assertIn("2026-10-22T11:43:27 PAPER", output.getvalue())
         self.assertIn("LIVE LOCKED", output.getvalue())
 
+class TestHealthCounterHUD(unittest.TestCase):
+    def test_counter_matches_finite_metric_count(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        dashboard.draw(data)
+        invalid = metric_health(data["report"])
+        missing = missing_metrics(data["report"])
+        self.assertIn(f"HEALTH {10-len(invalid)-len(missing)}/10", output.getvalue())
+        data["report"]["cash"] = "NaN"
+        dashboard.draw(data)
+        self.assertIn(f"HEALTH {10-len(metric_health(data['report']))-len(missing_metrics(data['report']))}/10",
+                      output.getvalue().splitlines()[-1])
+        self.assertEqual(len(output.getvalue().splitlines()), 2)
+
 class TestNonInteractiveQualityStream(unittest.TestCase):
     def test_quality_change_emits_new_line_without_duplicate_spam(self):
         output = io.StringIO()
