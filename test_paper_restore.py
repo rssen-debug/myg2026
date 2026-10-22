@@ -41,11 +41,21 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_rejects_unsupported_zip_compression_before_publishing(self):
+        original = sqlite_bytes()
+        (self.path / "paper_forward.db").write_bytes(original)
+        payload = io.BytesIO()
+        with zipfile.ZipFile(payload, "w", compression=zipfile.ZIP_BZIP2) as z:
+            z.writestr("paper_forward.db", original)
+        with self.assertRaisesRegex(ValueError, "Unsupported paper ZIP compression"):
+            module.safe_extract_zip(payload.getvalue(), self.path)
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
+
     def test_corrupted_btree_rejected_without_overwriting_existing_ledger(self):
         original = sqlite_bytes()
         (self.path / "paper_forward.db").write_bytes(original)
         damaged = bytearray(original)
-        damaged[100:108] = b"\\xff" * 8
+        damaged[100:108] = bytes([255]) * 8
         with self.assertRaises((ValueError, sqlite3.DatabaseError)):
             module.safe_extract_zip(
                 archive([("paper_forward.db", bytes(damaged))]), self.path
