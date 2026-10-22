@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import sqlite3
 import stat
+import tempfile
 import zipfile
 
 FILES = {
@@ -74,18 +75,20 @@ def safe_extract_zip(content: bytes, target: Path):
             if len(data) != info.file_size:
                 raise ValueError("Paper state member has incorrect size")
             recovered[info.filename] = data
+    # Validate SQLite in isolation before replacing any existing PAPER state.
+    with tempfile.TemporaryDirectory(prefix="paper-restore-") as scratch:
+        db = Path(scratch) / "paper_forward.db"
+        db.write_bytes(recovered["paper_forward.db"])
+        try:
+            with sqlite3.connect(db) as c:
+                integrity = c.execute("PRAGMA quick_check").fetchone()
+                if not integrity or integrity[0] != "ok":
+                    raise ValueError("Restored paper SQLite integrity check failed")
+        except sqlite3.DatabaseError as exc:
+            raise ValueError("Invalid paper SQLite database") from exc
     target.mkdir(parents=True, exist_ok=True)
     for name, data in recovered.items():
-        path = target / name
-        path.write_bytes(data)
-    db = target / "paper_forward.db"
-    try:
-        with sqlite3.connect(db) as c:
-            integrity = c.execute("PRAGMA quick_check").fetchone()
-            if not integrity or integrity[0] != "ok":
-                raise ValueError("Restored paper SQLite integrity check failed")
-    except sqlite3.DatabaseError as exc:
-        raise ValueError("Invalid paper SQLite database") from exc
+        (target / name).write_bytes(data)
     return seen
 
 
