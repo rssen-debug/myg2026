@@ -41,20 +41,51 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_paginated_artifact_list_fails_closed(self):
+    def test_paginated_artifact_list_fails_closed_on_missing_second_page(self):
         from unittest.mock import Mock
         import sys
-        response = Mock()
-        response.json.return_value = {"total_count": 101, "artifacts": []}
-        response.raise_for_status.return_value = None
+        first = Mock()
+        first.json.return_value = {"total_count": 101, "artifacts": [
+            {"id": i + 1, "name": "godlike-forward-state", "expired": True}
+            for i in range(100)
+        ]}
+        first.raise_for_status.return_value = None
+        second = Mock()
+        second.json.return_value = {"total_count": 101, "artifacts": []}
+        second.raise_for_status.return_value = None
         requests_stub = Mock()
-        requests_stub.get.return_value = response
+        requests_stub.get.side_effect = [first, second]
         with mock.patch.dict(os.environ, {
             "GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "test-token"
         }), mock.patch.dict(sys.modules, {"requests": requests_stub}):
-            with self.assertRaisesRegex(ValueError, "paginated"):
+            with self.assertRaisesRegex(ValueError, "Incomplete PAPER artifact pagination"):
                 module.main()
-        self.assertEqual(requests_stub.get.call_count, 1)
+        self.assertEqual(requests_stub.get.call_count, 2)
+
+    def test_paginated_artifact_list_reads_second_page(self):
+        from unittest.mock import Mock
+        import sys
+        first = Mock()
+        first.json.return_value = {"total_count": 101, "artifacts": [
+            {"id": i + 1, "name": "godlike-forward-state", "expired": True}
+            for i in range(100)
+        ]}
+        first.raise_for_status.return_value = None
+        second = Mock()
+        second.json.return_value = {"total_count": 101, "artifacts": [
+            {"id": 101, "name": "godlike-forward-state", "expired": True}
+        ]}
+        second.raise_for_status.return_value = None
+        requests_stub = Mock()
+        requests_stub.get.side_effect = [first, second]
+        with mock.patch.dict(os.environ, {
+            "GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "test-token"
+        }), mock.patch.dict(sys.modules, {"requests": requests_stub}), \\
+                mock.patch.object(module, "event") as event_stub:
+            module.main()
+        self.assertEqual(requests_stub.get.call_count, 2)
+        self.assertEqual(requests_stub.get.call_args.kwargs["params"]["page"], 2)
+        event_stub.assert_called_once()
 
     def test_regular_file_restore_root_is_rejected_unchanged(self):
         root = self.path / "state-root"
