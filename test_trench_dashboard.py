@@ -39,6 +39,19 @@ class TestRestoreEventHUD(unittest.TestCase):
             self.assertIsNone(latest_restore_event(log, run_id="new-run"))
             self.assertEqual(latest_restore_event(log, run_id="old-run")["artifact_id"], 7)
 
+    def test_invalid_restored_record_cannot_claim_success(self):
+        with tempfile.TemporaryDirectory() as folder:
+            log = Path(folder) / "forward_pulse_runs.jsonl"
+            log.write_text("\n".join(json.dumps(item) for item in [
+                {"status": "RESTORED", "artifact_id": 14, "run_id": "42"},
+                {"status": "RESTORED", "artifact_id": "forged", "run_id": "42"},
+                {"status": "RESTORED", "artifact_id": 0, "run_id": "42"},
+            ]) + "\n", encoding="utf-8")
+            self.assertEqual(latest_restore_event(log, run_id="42")["artifact_id"], 14)
+            log.write_text(json.dumps({"status": "RESTORED", "artifact_id": True,
+                                       "run_id": "42"}) + "\n", encoding="utf-8")
+            self.assertIsNone(latest_restore_event(log, run_id="42"))
+
     def test_local_dashboard_never_trusts_historical_restore(self):
         with tempfile.TemporaryDirectory() as folder:
             log = Path(folder) / "forward_pulse_runs.jsonl"
