@@ -29,9 +29,9 @@ def snapshot_paper_db(source: Path, destination: Path) -> Path:
             with sqlite3.connect(temporary, timeout=30) as dst:
                 src.backup(dst, pages=1024, sleep=0.05)
                 dst.execute("PRAGMA journal_mode=DELETE")
-                result = dst.execute("PRAGMA quick_check").fetchone()
+                result = dst.execute("PRAGMA integrity_check").fetchone()
                 if result != ("ok",):
-                    raise ValueError("PAPER snapshot failed SQLite quick_check")
+                    raise ValueError("PAPER snapshot failed SQLite integrity_check")
         os.replace(temporary, destination)
         return destination
     finally:
