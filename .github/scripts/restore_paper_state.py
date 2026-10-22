@@ -43,6 +43,7 @@ MAX_FILE_BYTES = 200 * 1024 * 1024
 MAX_SQLITE_BYTES = 512 * 1024 * 1024
 MAX_TOTAL_EXTRACT_BYTES = 768 * 1024 * 1024
 MAX_ARCHIVE_MEMBERS = 64
+MAX_ZIP_METADATA_BYTES = 256 * 1024
 MAX_ARCHIVE_BYTES = 200 * 1024 * 1024
 
 
@@ -54,12 +55,16 @@ def safe_extract_zip(content: bytes, target: Path):
     with zipfile.ZipFile(io.BytesIO(content)) as z:
         seen = set()
         total_size = 0
+        metadata_size = len(z.comment)
         infos = z.infolist()
         if not infos:
             raise ValueError("Empty state archive")
         if len(infos) > MAX_ARCHIVE_MEMBERS:
             raise ValueError("Too many paper archive members")
         for info in infos:
+            metadata_size += len(info.filename.encode("utf-8")) + len(info.extra) + len(info.comment)
+            if metadata_size > MAX_ZIP_METADATA_BYTES:
+                raise ValueError("Oversized paper ZIP metadata")
             name = info.filename
             if not (name in FILES or recognized_report(name)) or name in seen or info.is_dir():
                 raise ValueError("Unexpected, repeated, or unsafe archive member")
