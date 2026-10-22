@@ -111,9 +111,9 @@ def frame(snapshot, width=118, height=38, color=True):
     elif restore and restore["status"] == "FIRST_RUN":
         row("◇ RESTORE FIRST RUN  NY HISTORIK · INGEN TIDIGARE SQLITE · EJ KONTINUERLIG DATA | PAPER ONLY", "1;33")
     elif not current_run_id:
-        row("◇ RESTORE LOCAL  HISTORIK FINNS EVENTUELLT · EJ VERIFIERAD I DENNA SESSION | PAPER ONLY", "1;33")
+        row("◇ RESTORE LOCAL  ○ INGEN AKTUELL RUN-ID · HISTORIK EJ VERIFIERAD | PAPER ONLY", "1;33")
     else:
-        row("◇ RESTORE UNVERIFIED  INGEN BEKRÄFTAD ÅTERSTÄLLNING I DENNA KÖRNING | PAPER ONLY", "1;33")
+        row("◇ RESTORE UNVERIFIED  ○ SAKNAR BEVIS FÖR AKTUELL RUN-ID | PAPER ONLY", "1;33")
     as_of = snapshot.get("report_as_of")
     stale = bool(as_of and (datetime.now(timezone.utc)-datetime.fromisoformat(as_of)).total_seconds() > 30)
     row(("VÄRDERING INAKTUELL. Senast: " if stale else "Värderad: ") + str(as_of or "saknas") + " | Lönsamhet EJ verifierad", "33" if stale else "2")
