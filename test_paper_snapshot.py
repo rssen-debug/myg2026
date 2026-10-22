@@ -80,26 +80,16 @@ class TestPaperSnapshot(unittest.TestCase):
                 db.execute("INSERT INTO evidence VALUES ('PAPER')")
             original_connect = module.sqlite3.connect
 
-            class RejectIntegrity:
-                def __init__(self, conn):
-                    self.conn = conn
-
-                def __enter__(self):
-                    return self
-
-                def __exit__(self, *args):
-                    self.conn.close()
-
+            class RejectIntegrity(sqlite3.Connection):
                 def execute(self, sql, *args):
                     if sql == "PRAGMA integrity_check":
-                        return self.conn.execute("SELECT 'corrupt'")
-                    return self.conn.execute(sql, *args)
+                        return super().execute("SELECT 'corrupt'")
+                    return super().execute(sql, *args)
 
             def connect(path, *args, **kwargs):
-                conn = original_connect(path, *args, **kwargs)
                 if Path(str(path)).name.startswith(".paper-snapshot-"):
-                    return RejectIntegrity(conn)
-                return conn
+                    kwargs["factory"] = RejectIntegrity
+                return original_connect(path, *args, **kwargs)
 
             with mock.patch.object(module.sqlite3, "connect", side_effect=connect):
                 with self.assertRaisesRegex(ValueError, "integrity_check"):
