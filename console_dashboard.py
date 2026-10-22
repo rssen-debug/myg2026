@@ -311,9 +311,10 @@ class ConsoleDashboard:
                     f"INVALID {len(invalid)} [{','.join(invalid[:3]) or '-'}] | "
                     f"MISSING {len(missing)} [{','.join(missing[:3]) or '-'}]| "
                     f"PnL {money(report.get('net_pnl'), True)}| "
-                    f"CASH {portfolio[0]}| EQUITY {portfolio[1]} | "
+                    f"CASH {portfolio[0]} | "
                 )
                 suffix = (
+                    f"EQUITY {portfolio[1]} | "
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
                     f"POSITIONS {len(snapshot.get('positions') or [])} | "
                     f"{fit(snapshot.get('candidates', 0), 5).strip()} tok | LIVE LOCKED"
