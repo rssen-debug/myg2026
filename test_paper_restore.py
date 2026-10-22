@@ -41,6 +41,18 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_archive_member_count_limit_rejects_before_state_writes(self):
+        original = sqlite_bytes()
+        (self.path / "paper_forward.db").write_bytes(original)
+        payload = archive([
+            ("paper_forward.db", original),
+            ("paper_forward.log", b"paper"),
+        ])
+        with mock.patch.object(module, "MAX_ARCHIVE_MEMBERS", 1):
+            with self.assertRaisesRegex(ValueError, "Too many paper archive members"):
+                module.safe_extract_zip(payload, self.path)
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
+
     def test_streaming_restore_accepts_multi_chunk_sqlite(self):
         original = sqlite_bytes()
         payload = archive([
