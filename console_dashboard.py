@@ -265,10 +265,20 @@ class ConsoleDashboard:
     def draw(self, snapshot):
         if not self.interactive:
             # Redirected output is a concise status stream, never repeated full screens.
+            report = snapshot.get("report") or {}
+            invalid = metric_health(report)
+            missing = missing_metrics(report)
+            freshness = valuation_freshness(snapshot.get("report_as_of"))
             signature = (snapshot.get("status"), snapshot.get("entries_paused"),
-                         str(snapshot.get("report", {}).get("net_pnl")), len(snapshot.get("positions", [])))
+                         str(report.get("net_pnl")), len(snapshot.get("positions", [])),
+                         tuple(invalid), tuple(missing), freshness)
             if signature != self.last_plain_status:
-                self.stream.write(f"{snapshot.get('updated_at')} PAPER {signature[0]} PnL {money(snapshot.get('report', {}).get('net_pnl'), True)} | {snapshot.get('candidates', 0)} tokens\n")
+                self.stream.write(
+                    f"{clean(snapshot.get('updated_at', '--'))} PAPER {clean(signature[0])} "
+                    f"PnL {money(report.get('net_pnl'), True)} | "
+                    f"DATA {freshness} | INVALID {len(invalid)} | MISSING {len(missing)} "
+                    f"| {snapshot.get('candidates', 0)} tokens\n"
+                )
                 self.stream.flush()
                 self.last_plain_status = signature
             return
