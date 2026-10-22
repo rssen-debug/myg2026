@@ -303,7 +303,7 @@ class ConsoleDashboard:
             if signature != self.last_plain_status:
                 self.stream.write(fit_ellipsis(
                     f"{fit(snapshot.get('updated_at', '--'), 19).strip()} PAPER "
-                    f"{status_marker} QUALITY {quality} | "
+                    f"{status_marker} QUALITY {quality} ({quality_detail}) | "
                     f"DATA {freshness} | INVALID {len(invalid)} "
                     f"[{','.join(invalid[:3]) or '-'}] | MISSING {len(missing)} "
                     f"[{','.join(missing[:3]) or '-'}] | "
