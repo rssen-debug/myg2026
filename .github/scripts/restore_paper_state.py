@@ -352,28 +352,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()        expected_digest = candidate.get("digest")
-        if expected_digest is not None:
-            if (not isinstance(expected_digest, str)
-                    or not expected_digest.startswith("sha256:")
-                    or len(expected_digest) != 71
-                    or any(ch not in "0123456789abcdef" for ch in expected_digest[7:])):
-                raise ValueError("Invalid PAPER artifact SHA256 digest metadata")
-            actual_digest = hashlib.sha256(archive_bytes).hexdigest()
-            if actual_digest != expected_digest[7:]:
-                raise ValueError("PAPER artifact SHA256 digest mismatch")
-        try:
-            restored = safe_extract_zip(archive_bytes, Path("."))
-        except ValueError as exc:
-            if str(exc) == "No paper_forward.db in previous run":
-                print(f"PAPER_STATE: SKIP_REPORT_ONLY_ARTIFACT id={candidate['id']} (missing SQLite)")
-                continue
-            raise
-        event("RESTORED", artifact_id=candidate["id"], detail=f"{len(restored)} paper state files")
-        print(f"Restored prior paper state artifact ID {candidate['id']}; this is NOT continuous coverage.")
-        return
-    raise ValueError("Historical artifacts exist but none contains a recoverable paper SQLite database")
-
-
-if __name__ == "__main__":
     main()
