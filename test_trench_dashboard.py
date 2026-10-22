@@ -39,6 +39,17 @@ class TestRestoreEventHUD(unittest.TestCase):
             self.assertIsNone(latest_restore_event(log, run_id="new-run"))
             self.assertEqual(latest_restore_event(log, run_id="old-run")["artifact_id"], 7)
 
+    def test_large_log_tail_discards_partial_jsonl_line(self):
+        with tempfile.TemporaryDirectory() as folder:
+            log = Path(folder) / "forward_pulse_runs.jsonl"
+            log.write_text(json.dumps({"status": "RESTORED", "artifact_id": 17,
+                                       "run_id": "old", "detail": "x" * 9000}) +
+                           "\n" + json.dumps({"status": "RESTORED", "artifact_id": 19,
+                                               "run_id": "new"}) + "\n",
+                           encoding="utf-8")
+            self.assertIsNone(latest_restore_event(log, run_id="old"))
+            self.assertEqual(latest_restore_event(log, run_id="new")["artifact_id"], 19)
+
     def test_invalid_restored_record_cannot_claim_success(self):
         with tempfile.TemporaryDirectory() as folder:
             log = Path(folder) / "forward_pulse_runs.jsonl"
