@@ -33,9 +33,9 @@ class TestSafePlainLogFields(unittest.TestCase):
         output = io.StringIO()
         dashboard = ConsoleDashboard(stream=output)
         data = example()
-        data["status"] = "RUNNING" + chr(27) + "[31m" + "X" * 200 + "\\nFAKE ALERT"
-        data["updated_at"] = "NOW" + "\\nFORGED" + "X" * 100
-        data["candidates"] = "5" + "\\nFAKE SUCCESS"
+        data["status"] = "RUNNING" + chr(27) + "[31m" + "X" * 200 + "\nFAKE ALERT"
+        data["updated_at"] = "NOW" + "\nFORGED" + "X" * 100
+        data["candidates"] = "5" + "\nFAKE SUCCESS"
         dashboard.draw(data)
         self.assertEqual(len(output.getvalue().splitlines()), 1)
         self.assertNotIn(chr(27), output.getvalue())
