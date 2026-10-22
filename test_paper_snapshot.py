@@ -124,6 +124,8 @@ class TestPaperSnapshot(unittest.TestCase):
         self.assertIn("snapshot_manifest.json", workflow)
         self.assertIn("id: paper_runtime", workflow)
         self.assertIn("id: paper_verify", workflow)
+        self.assertIn('conn.execute("PRAGMA integrity_check").fetchone()[0] == "ok"', workflow)
+        self.assertNotIn('conn.execute("PRAGMA quick_check").fetchone()[0] == "ok"', workflow)
         self.assertIn("if: steps.paper_runtime.outcome == 'success' && steps.paper_verify.outcome == 'success'", workflow)
         self.assertIn("hashlib.file_digest", workflow)
         self.assertIn("if: always()", workflow)
