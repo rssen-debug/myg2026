@@ -78,6 +78,7 @@ class TestRestoreEventHUD(unittest.TestCase):
             output = frame(example(), width=128, height=80, color=False)
         self.assertIn("RESTORE VERIFIED", output)
         self.assertIn("artifact 42", output)
+        self.assertIn("EJ KONTINUERLIG HISTORIK", output)
 
     def test_reads_latest_real_restore_event(self):
         with tempfile.TemporaryDirectory() as folder:
