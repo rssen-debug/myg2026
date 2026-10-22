@@ -405,6 +405,7 @@ class TestSafePaperRestore(unittest.TestCase):
              "created_at":"2026-10-14T19:00:00Z","archive_download_url":"https://example.test/20",
              "workflow_run":{"id":20}},
             {"name":"godlike-forward-state","id":10,"expired":False,
+             "digest":"sha256:" + hashlib.sha256(previous).hexdigest(),
              "created_at":"2026-10-14T18:00:00Z","archive_download_url":"https://example.test/10",
              "workflow_run":{"id":10}},
         ]}
