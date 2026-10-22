@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from console_dashboard import frame, latest_restore_event, percentage
+from console_dashboard import frame, latest_restore_event, percentage, metric_health
 from paper_runtime import render_dashboard
 
 
@@ -25,6 +25,17 @@ def example():
         "events":[],"quotes":[],"discovery":{},
     }
 
+
+class TestMetricQualityHUD(unittest.TestCase):
+    def test_dynamic_data_quality_indicator(self):
+        healthy = frame(example(), width=128, height=80, color=False)
+        self.assertIn("DATA QUALITY  NUMERIC FIELDS VALID OR MISSING", healthy)
+        bad = example()
+        bad["report"]["net_pnl"] = "NaN"
+        bad["report"]["win_rate"] = "broken"
+        self.assertEqual(metric_health(bad["report"]), ["net_pnl", "win_rate"])
+        output = frame(bad, width=128, height=80, color=False)
+        self.assertIn("DATA QUALITY  INVALID METRICS: net_pnl, win_rate", output)
 
 class TestInvalidMetricsHUD(unittest.TestCase):
     def test_nonfinite_and_malformed_metrics_never_crash_dashboard(self):
