@@ -62,6 +62,20 @@ class TestSafePaperRestore(unittest.TestCase):
                 module.main()
         self.assertEqual(requests_stub.get.call_count, 2)
 
+    def test_paginated_artifact_list_has_hard_safety_limit(self):
+        from unittest.mock import Mock
+        import sys
+        response = Mock()
+        response.json.return_value = {"total_count": 10001, "artifacts": []}
+        requests_stub = Mock()
+        requests_stub.get.return_value = response
+        with mock.patch.dict(os.environ, {
+            "GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "test-token"
+        }), mock.patch.dict(sys.modules, {"requests": requests_stub}):
+            with self.assertRaisesRegex(ValueError, "exceeds safety limit"):
+                module.main()
+        self.assertEqual(requests_stub.get.call_count, 1)
+
     def test_paginated_artifact_list_requires_both_fields(self):
         from unittest.mock import Mock
         import sys
