@@ -303,7 +303,7 @@ class ConsoleDashboard:
             if signature != self.last_plain_status:
                 self.stream.write(fit_ellipsis(
                     f"{fit(snapshot.get('updated_at', '--'), 19).strip()} PAPER "
-                    f"{status_marker} QUALITY {quality} ({quality_detail}) | "
+                    f"{status_marker} QUALITY {quality} | "
                     f"DATA {freshness} | INVALID {len(invalid)} "
                     f"[{','.join(invalid[:3]) or '-'}] | MISSING {len(missing)} "
                     f"[{','.join(missing[:3]) or '-'}] | "
@@ -311,8 +311,7 @@ class ConsoleDashboard:
                     f"CASH {portfolio[0]} | EQUITY {portfolio[1]} | "
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
                     f"POSITIONS {len(snapshot.get('positions') or [])} | "
-                    f"{fit(snapshot.get('candidates', 0), 5).strip()} tok | "
-                    f"{fit(signature[0], 10).strip()}"
+                    f"{fit(snapshot.get('candidates', 0), 5).strip()} tok"
                 , 220).rstrip() + "\n")
                 self.stream.flush()
                 self.last_plain_status = signature
