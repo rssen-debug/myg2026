@@ -42,7 +42,11 @@ def money(value, signed=False):
 
 
 def percentage(value):
-    return "--" if value is None else f"{Decimal(str(value)):.1f}%"
+    try:
+        number = Decimal(str(value)) if value is not None else None
+        return f"{number:.1f}%" if number is not None and number.is_finite() else "--"
+    except (ValueError, ArithmeticError):
+        return "--"
 
 
 def latest_restore_event(path=Path("forward_pulse_runs.jsonl"), run_id=None):
