@@ -118,6 +118,8 @@ class TestPaperSnapshot(unittest.TestCase):
         self.assertIn("path: paper_artifact/", workflow)
         self.assertIn("if-no-files-found: error", workflow)
         self.assertIn("compression-level: 1", workflow)
+        self.assertIn("overwrite: false", workflow)
+        self.assertNotIn("overwrite: true", workflow)
         self.assertIn("timeout-minutes: 25", workflow)
         self.assertIn("snapshot_manifest.json", workflow)
         self.assertIn("id: paper_runtime", workflow)
