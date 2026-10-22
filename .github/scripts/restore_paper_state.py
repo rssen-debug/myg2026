@@ -285,7 +285,11 @@ def main():
             raise ValueError("Invalid PAPER artifact size metadata")
         if declared_size is not None and declared_size > MAX_ARCHIVE_BYTES:
             raise ValueError("PAPER artifact declared size exceeds archive limit")
-        with requests.get(candidate["archive_download_url"], headers=headers, timeout=(15, 90), stream=True) as archive:
+        archive_url = candidate.get("archive_download_url")
+        if (not isinstance(archive_url, str)
+                or not archive_url.startswith("https://api.github.com/repos/")):
+            raise ValueError("Invalid PAPER artifact download URL")
+        with requests.get(archive_url, headers=headers, timeout=(15, 90), stream=True) as archive:
             archive.raise_for_status()
             chunks, total_bytes = [], 0
             for chunk in archive.iter_content(chunk_size=1024 * 1024):
