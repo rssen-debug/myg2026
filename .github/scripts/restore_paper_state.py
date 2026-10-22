@@ -285,8 +285,17 @@ def main():
             raise ValueError("Invalid PAPER artifact size metadata")
         if declared_size is not None and declared_size > MAX_ARCHIVE_BYTES:
             raise ValueError("PAPER artifact declared size exceeds archive limit")
-        archive = requests.get(candidate["archive_download_url"], headers=headers, timeout=(15, 90))
-        archive.raise_for_status()
+        with requests.get(candidate["archive_download_url"], headers=headers, timeout=(15, 90), stream=True) as archive:
+            archive.raise_for_status()
+            chunks, total_bytes = [], 0
+            for chunk in archive.iter_content(chunk_size=1024 * 1024):
+                if not chunk:
+                    continue
+                total_bytes += len(chunk)
+                if total_bytes > MAX_ARCHIVE_BYTES:
+                    raise ValueError("PAPER artifact streamed archive exceeds size limit")
+                chunks.append(chunk)
+            archive_bytes = b"".join(chunks)
         expected_digest = candidate.get("digest")
         if expected_digest is not None:
             if (not isinstance(expected_digest, str)
@@ -294,11 +303,11 @@ def main():
                     or len(expected_digest) != 71
                     or any(ch not in "0123456789abcdef" for ch in expected_digest[7:])):
                 raise ValueError("Invalid PAPER artifact SHA256 digest metadata")
-            actual_digest = hashlib.sha256(archive.content).hexdigest()
+            actual_digest = hashlib.sha256(archive_bytes).hexdigest()
             if actual_digest != expected_digest[7:]:
                 raise ValueError("PAPER artifact SHA256 digest mismatch")
         try:
-            restored = safe_extract_zip(archive.content, Path("."))
+            restored = safe_extract_zip(archive_bytes, Path("."))
         except ValueError as exc:
             if str(exc) == "No paper_forward.db in previous run":
                 print(f"PAPER_STATE: SKIP_REPORT_ONLY_ARTIFACT id={candidate['id']} (missing SQLite)")
