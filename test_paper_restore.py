@@ -41,11 +41,11 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_actual_decompression_limit_preserves_existing_db(self):
+    def test_declared_size_preflight_preserves_existing_db(self):
         original = sqlite_bytes()
         (self.path / "paper_forward.db").write_bytes(original)
         with mock.patch.object(module, "MAX_FILE_BYTES", 4):
-            with self.assertRaisesRegex(ValueError, "Oversized paper file during decompression"):
+            with self.assertRaisesRegex(ValueError, "Oversized paper file"):
                 module.safe_extract_zip(archive([
                     ("paper_forward.db", original),
                     ("paper_forward.log", b"12345"),
