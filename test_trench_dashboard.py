@@ -1,12 +1,13 @@
 """PAPER console must show trench telemetry and moonbag without claiming safety."""
 import unittest
 import json
+import io
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from console_dashboard import frame, latest_restore_event, percentage, metric_health, missing_metrics, valuation_freshness
+from console_dashboard import ConsoleDashboard, frame, latest_restore_event, percentage, metric_health, missing_metrics, valuation_freshness
 from paper_runtime import render_dashboard
 
 
@@ -26,6 +27,34 @@ def example():
         "events":[],"quotes":[],"discovery":{},
     }
 
+
+class TestNonInteractiveQualityStream(unittest.TestCase):
+    def test_quality_change_emits_new_line_without_duplicate_spam(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        data["report_as_of"] = datetime.now(timezone.utc).isoformat()
+        dashboard.draw(data)
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 1)
+        self.assertIn("DATA FRESH", output.getvalue())
+        data["report"]["net_pnl"] = "NaN"
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 2)
+        self.assertIn("INVALID 1", output.getvalue().splitlines()[-1])
+        data["report_as_of"] = "not-a-date"
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 3)
+        self.assertIn("DATA INVALID", output.getvalue().splitlines()[-1])
+
+    def test_plain_stream_never_contains_external_escape_sequences(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        data["status"] = "\\x1b[31mRUNNING"
+        dashboard.draw(data)
+        self.assertNotIn("\\x1b", output.getvalue())
+        self.assertIn("PAPER", output.getvalue())
 
 class TestCompactStatusHUD(unittest.TestCase):
     def test_critical_quality_status_visible_in_short_terminal(self):
