@@ -42,6 +42,24 @@ class TestEllipsisHUD(unittest.TestCase):
         self.assertEqual(fit_ellipsis("漢字漢字", 5), "漢字…")
         self.assertEqual(fit_ellipsis("abc", 0), "")
 
+class TestQualitySeverityMarkers(unittest.TestCase):
+    def test_plain_status_markers_reflect_evidence_not_trading_permission(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        data["report_as_of"] = datetime.now(timezone.utc).isoformat()
+        dashboard.draw(data)
+        self.assertIn("[?] QUALITY PARTIAL", output.getvalue())
+        data["report"]["win_rate"] = 50
+        data["report"]["max_drawdown_pct"] = 1
+        data["report"]["profit_factor"] = 1.2
+        dashboard.draw(data)
+        self.assertIn("[+] QUALITY OK", output.getvalue().splitlines()[-1])
+        data["report"]["net_pnl"] = "NaN"
+        dashboard.draw(data)
+        self.assertIn("[!] QUALITY ALERT", output.getvalue().splitlines()[-1])
+        self.assertIn("ENTRIES ACTIVE", output.getvalue().splitlines()[-1])
+
 class TestSafePlainLogFields(unittest.TestCase):
     def test_untrusted_log_fields_are_single_line_and_bounded(self):
         output = io.StringIO()
