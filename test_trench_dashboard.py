@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from console_dashboard import ConsoleDashboard, frame, latest_restore_event, percentage, metric_health, missing_metrics, valuation_freshness
+from console_dashboard import ConsoleDashboard, frame, latest_restore_event, percentage, metric_health, missing_metrics, valuation_freshness, fit_ellipsis
 from paper_runtime import render_dashboard
 
 
@@ -27,6 +27,20 @@ def example():
         "events":[],"quotes":[],"discovery":{},
     }
 
+
+class TestEllipsisHUD(unittest.TestCase):
+    def test_truncated_stage_has_visible_marker(self):
+        data = example()
+        data["stage"] = "VERY LONG STAGE " * 40
+        output = frame(data, width=60, height=25, color=False)
+        self.assertIn("…", output)
+        self.assertTrue(all(len(line) <= 60 for line in output.splitlines()))
+
+    def test_ellipsis_width_is_bounded_with_wide_characters(self):
+        self.assertEqual(fit_ellipsis("abcdef", 4), "abc…")
+        self.assertEqual(fit_ellipsis("abc", 4), "abc ")
+        self.assertEqual(fit_ellipsis("漢字漢字", 5), "漢字…")
+        self.assertEqual(fit_ellipsis("abc", 0), "")
 
 class TestSafePlainLogFields(unittest.TestCase):
     def test_untrusted_log_fields_are_single_line_and_bounded(self):
