@@ -456,6 +456,38 @@ class TestSafePaperRestore(unittest.TestCase):
         finally:
             os.chdir(cwd)
 
+    def test_redirect_download_does_not_forward_github_token(self):
+        from unittest.mock import Mock, patch
+        zipped = archive([("paper_forward.db", sqlite_bytes())])
+        listing = Mock()
+        listing.json.return_value = {"total_count": 1, "artifacts": [{
+            "name": "godlike-forward-state", "id": 42, "expired": False,
+            "created_at": "2026-10-14T18:00:00Z",
+            "archive_download_url": "https://api.github.com/repos/rssen-debug/myg2026/actions/artifacts/42/zip",
+            "workflow_run": {"id": 42}
+        }]}
+        redirect = mock.MagicMock()
+        redirect.__enter__.return_value.status_code = 302
+        redirect.__enter__.return_value.headers = {"Location": "https://storage.example.test/signed.zip"}
+        download = mock.MagicMock()
+        download.__enter__.return_value.status_code = 200
+        download.__enter__.return_value.iter_content.return_value = [zipped]
+        cwd = Path.cwd()
+        try:
+            os.chdir(self.path)
+            with patch.dict(os.environ, {
+                "GITHUB_REPOSITORY": "rssen-debug/myg2026",
+                "GITHUB_TOKEN": "synthetic-test-token",
+                "GITHUB_RUN_ID": "43",
+            }), patch("requests.get", side_effect=[listing, redirect, download]) as getter:
+                module.main()
+                self.assertEqual(getter.call_count, 3)
+                self.assertEqual(getter.call_args.kwargs["headers"], {})
+                self.assertFalse(getter.call_args.kwargs["allow_redirects"])
+            self.assertTrue((self.path / "paper_forward.db").exists())
+        finally:
+            os.chdir(cwd)
+
     def test_untrusted_artifact_url_rejected_before_network_request(self):
         from unittest.mock import Mock, patch
         listing = Mock()
