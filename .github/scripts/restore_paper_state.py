@@ -319,15 +319,15 @@ def main():
                 archive.raise_for_status()
                 if archive.status_code in (301, 302, 303, 307, 308):
                     raise ValueError("Nested PAPER artifact redirect rejected")
-            chunks, total_bytes = [], 0
-            for chunk in archive.iter_content(chunk_size=1024 * 1024):
-                if not chunk:
-                    continue
-                total_bytes += len(chunk)
-                if total_bytes > MAX_ARCHIVE_BYTES:
-                    raise ValueError("PAPER artifact streamed archive exceeds size limit")
-                chunks.append(chunk)
-            archive_bytes = b"".join(chunks)
+                chunks, total_bytes = [], 0
+                for chunk in archive.iter_content(chunk_size=1024 * 1024):
+                    if not chunk:
+                        continue
+                    total_bytes += len(chunk)
+                    if total_bytes > MAX_ARCHIVE_BYTES:
+                        raise ValueError("PAPER artifact streamed archive exceeds size limit")
+                    chunks.append(chunk)
+                archive_bytes = b"".join(chunks)
         expected_digest = candidate.get("digest")
         if expected_digest is not None:
             if (not isinstance(expected_digest, str)
