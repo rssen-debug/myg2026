@@ -214,6 +214,16 @@ class TestCompactPausedStatus(unittest.TestCase):
         ConsoleDashboard(stream=output).draw(data)
         self.assertIn("POSITIONS 0", output.getvalue())
 
+class TestAuditTimestampVisibility(unittest.TestCase):
+    def test_plain_log_includes_time_not_only_date(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        data["updated_at"] = "2026-10-22T11:43:27+00:00"
+        dashboard.draw(data)
+        self.assertIn("2026-10-22T11:43:27 PAPER", output.getvalue())
+        self.assertIn("LIVE LOCKED", output.getvalue())
+
 class TestNonInteractiveQualityStream(unittest.TestCase):
     def test_quality_change_emits_new_line_without_duplicate_spam(self):
         output = io.StringIO()
