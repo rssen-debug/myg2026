@@ -301,18 +301,24 @@ class ConsoleDashboard:
                          tuple(invalid), tuple(missing), freshness, invalid_values, portfolio,
                          snapshot.get("candidates", 0))
             if signature != self.last_plain_status:
-                self.stream.write(fit_ellipsis(
-                    f"{fit(snapshot.get('updated_at', '--'), 19).strip()} PAPER "
+                # Put actionable counts first and preserve the tail even at 220 columns.
+                # Reserve room for positions and discovery instead of truncating them.
+                prefix = (
+                    f"{fit(snapshot.get('updated_at', '--'), 10).strip()} PAPER "
                     f"{status_marker} QUALITY {quality} ({quality_detail}) | "
                     f"DATA {freshness} | "
                     f"INVALID {len(invalid)} [{','.join(invalid[:3]) or '-'}] | "
                     f"MISSING {len(missing)} [{','.join(missing[:3]) or '-'}] | "
                     f"PnL {money(report.get('net_pnl'), True)} | "
                     f"CASH {portfolio[0]} | EQUITY {portfolio[1]} | "
+                )
+                suffix = (
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
                     f"POSITIONS {len(snapshot.get('positions') or [])} | "
                     f"{fit(snapshot.get('candidates', 0), 5).strip()} tok"
-                , 220).rstrip() + "\n")
+                )
+                budget = max(0, 220 - len(clean(suffix)) - 1)
+                self.stream.write(fit_ellipsis(prefix, budget).rstrip() + " " + clean(suffix) + "\n")
                 self.stream.flush()
                 self.last_plain_status = signature
             return
