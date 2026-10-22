@@ -292,6 +292,9 @@ class ConsoleDashboard:
             # Track key portfolio values even when their validity does not change.
             # Only bounded summaries are emitted, never raw untrusted values.
             portfolio = (money(report.get("cash")), money(report.get("total_port")))
+            quality = "ALERT" if invalid or freshness != "FRESH" else "PARTIAL" if missing else "OK"
+            # Make safety-relevant changes visible without claiming the trading engine is paused.
+            status_marker = "[!]" if quality == "ALERT" else "[?]" if quality == "PARTIAL" else "[+]"
             signature = (snapshot.get("status"), snapshot.get("entries_paused"),
                          str(report.get("net_pnl")), len(snapshot.get("positions", [])),
                          tuple(invalid), tuple(missing), freshness, invalid_values, portfolio)
@@ -302,7 +305,7 @@ class ConsoleDashboard:
                     f"PnL {money(report.get('net_pnl'), True)} | "
                     f"CASH {portfolio[0]} | EQUITY {portfolio[1]} | "
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
-                    f"QUALITY {'ALERT' if invalid or freshness != 'FRESH' else 'PARTIAL' if missing else 'OK'} | "
+                    f"{status_marker} QUALITY {quality} | "
                     f"DATA {freshness} | INVALID {len(invalid)} "
                     f"[{','.join(invalid[:3]) or '-'}] | MISSING {len(missing)} "
                     f"[{','.join(missing[:3]) or '-'}] "
