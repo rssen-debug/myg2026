@@ -47,6 +47,24 @@ class TestNonInteractiveQualityStream(unittest.TestCase):
         self.assertEqual(len(output.getvalue().splitlines()), 3)
         self.assertIn("DATA INVALID", output.getvalue().splitlines()[-1])
 
+    def test_log_names_fields_and_limits_output(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        data["report"]["net_pnl"] = "NaN"
+        data["report"]["cash"] = "Infinity"
+        data["report"]["fees"] = "broken"
+        data["report"]["initial_cash"] = "NaN"
+        data["report"]["win_rate"] = None
+        dashboard.draw(data)
+        line = output.getvalue()
+        self.assertIn("INVALID 4 [net_pnl,cash,fees]", line)
+        self.assertIn("MISSING", line)
+        self.assertIn("win_rate", line)
+        self.assertNotIn("initial_cash]", line)
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 1)
+
     def test_plain_stream_never_contains_external_escape_sequences(self):
         output = io.StringIO()
         dashboard = ConsoleDashboard(stream=output)
