@@ -371,7 +371,7 @@ def main():
             restored = safe_extract_zip(archive_bytes, Path("."))
         except ValueError as exc:
             if str(exc) == "No paper_forward.db in previous run":
-                print(f"PAPER_STATE: SKIP_REPORT_ONLY_ARTIFACT id={candidate['id']} (missing SQLite)")
+                event("SKIP_REPORT_ONLY_ARTIFACT", artifact_id=candidate["id"], detail="missing SQLite")
                 continue
             raise
         event("RESTORED", artifact_id=candidate["id"], detail=f"{len(restored)} paper state files")
