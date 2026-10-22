@@ -312,10 +312,10 @@ class ConsoleDashboard:
                 # Reserve room for positions and discovery instead of truncating them.
                 # Reserve critical status and portfolio figures; truncate only field details.
                 head = (
-                    f"{clean(str(snapshot.get('updated_at') or '--'))[:19]} PAPER "
+                    f"{clean(str(snapshot.get('updated_at') or '--'))[:10]} PAPER "
                     f"{status_marker} {'[PAUSED] ' if snapshot.get('entries_paused') else ''}"
                     f"QUALITY {quality} | DATA {freshness} | "
-                    f"HEALTH {max(0, 10-len(invalid)-len(missing))}/10 | "
+                    f"H{max(0, 10-len(invalid)-len(missing))}/10 | "
                     f"INVALID {len(invalid)} | MISSING {len(missing)} | "
                 )
                 tail = (
@@ -326,7 +326,7 @@ class ConsoleDashboard:
                     f"{fit(snapshot.get('candidates', 0), 5).strip()} tok | LIVE LOCKED"
                 )
                 detail = (
-                    f"{quality_detail} | "
+                    f"{quality_detail} "
                     f"BAD [{','.join(invalid[:3]) or '-'}] "
                     f"MISS [{','.join(missing[:3]) or '-'}] | "
                 )
