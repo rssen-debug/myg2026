@@ -93,7 +93,13 @@ def frame(snapshot, width=118, height=38, color=True):
     row(snapshot.get("stage", "Startar..."), "2")
     rows.append(rule)
     pnl = report.get("net_pnl")
-    pnl_style = "1;33" if pnl is None else "1;32" if Decimal(str(pnl)) > 0 else "1;31" if Decimal(str(pnl)) < 0 else "1;37"
+    try:
+        pnl_number = Decimal(str(pnl)) if pnl is not None else None
+        if pnl_number is not None and not pnl_number.is_finite():
+            pnl_number = None
+    except (ValueError, ArithmeticError):
+        pnl_number = None
+    pnl_style = "1;33" if pnl_number is None else "1;32" if pnl_number > 0 else "1;31" if pnl_number < 0 else "1;37"
     row(f"NETTO {money(pnl, True)}    REALISERAT {money(report.get('realized_pnl'), True)}    OREALISERAT {money(report.get('unrealized_pnl'), True)}", pnl_style)
     if not report.get("total_trades") and not snapshot.get("positions"):
         row("INGA TRADES: modellfriktion/likvidationsvarde av start-USDC/SOL ar inte handels-PnL.", "33")
