@@ -26,6 +26,17 @@ def example():
     }
 
 
+class TestMetricLegendHUD(unittest.TestCase):
+    def test_missing_metrics_are_not_presented_as_zero(self):
+        data = example()
+        data["report"]["net_pnl"] = None
+        data["report"]["profit_factor"] = None
+        output = frame(data, width=128, height=80, color=False)
+        self.assertIn("METRIC LEGEND", output)
+        self.assertIn("INTE NOLL", output)
+        self.assertIn("NETTO OKÄNT", output)
+        self.assertIn("PF --", output)
+
 class TestMetricQualityHUD(unittest.TestCase):
     def test_profit_factor_never_renders_raw_nonfinite_value(self):
         for value in ("NaN", "Infinity", "garbage"):
