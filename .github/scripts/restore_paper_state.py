@@ -164,8 +164,11 @@ def safe_extract_zip(content: bytes, target: Path):
     target.mkdir(parents=True, exist_ok=True)
     # Reject both live and dangling links before moving any existing state.
     for name in recovered:
-        if (target / name).is_symlink():
+        destination = target / name
+        if destination.is_symlink():
             raise ValueError("Paper restore destination file must not be a symlink")
+        if destination.exists() and not destination.is_file():
+            raise ValueError("Paper restore destination must be a regular file")
     with tempfile.TemporaryDirectory(prefix=".paper-restore-stage-", dir=target) as staging:
         for name, data in recovered.items():
             (Path(staging) / name).write_bytes(data)
