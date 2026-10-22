@@ -238,6 +238,8 @@ def main():
         )
         response.raise_for_status()
         listing = response.json()
+        if not isinstance(listing, dict):
+            raise ValueError("Invalid PAPER artifact pagination response")
         batch = listing.get("artifacts", [])
         total = listing.get("total_count")
         if (type(total) is not int or total < 0 or not isinstance(batch, list)
