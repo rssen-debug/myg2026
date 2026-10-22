@@ -302,7 +302,8 @@ def main():
                 redirected_url = initial.headers.get("Location", "")
                 parsed = urlsplit(redirected_url)
                 if (parsed.scheme != "https" or not parsed.hostname
-                        or parsed.username or parsed.password):
+                        or parsed.username or parsed.password or parsed.fragment
+                        or parsed.port not in (None, 443)):
                     raise ValueError("Unsafe PAPER artifact redirect URL")
                 # GitHub returns a signed storage URL; never forward the GitHub token.
                 download_url, download_headers = redirected_url, {}
