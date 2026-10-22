@@ -99,7 +99,7 @@ def frame(snapshot, width=118, height=38, color=True):
     if restore and restore["status"] == "RESTORED":
         row(f"◆ RESTORE VERIFIED  {restore['status']} | artifact {restore.get('artifact_id') or '--'} | {restore.get('utc', '--')} | PAPER ONLY", "1;36")
     elif restore and restore["status"] == "FIRST_RUN":
-        row("◇ RESTORE FIRST RUN  INGEN TIDIGARE SQLITE ÅTERSTÄLLD | PAPER ONLY", "1;33")
+        row("◇ RESTORE FIRST RUN  NY HISTORIK · INGEN TIDIGARE SQLITE · EJ KONTINUERLIG DATA | PAPER ONLY", "1;33")
     else:
         row("◇ RESTORE UNVERIFIED  INGEN BEKRÄFTAD ÅTERSTÄLLNING I DENNA KÖRNING | PAPER ONLY", "1;33")
     as_of = snapshot.get("report_as_of")
