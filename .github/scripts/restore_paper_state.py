@@ -91,9 +91,13 @@ def safe_extract_zip(content: bytes, target: Path):
                     raise ValueError("Restored paper SQLite integrity check failed")
         except sqlite3.DatabaseError as exc:
             raise ValueError("Invalid paper SQLite database") from exc
+    # Stage all members before replacing existing PAPER state.
     target.mkdir(parents=True, exist_ok=True)
-    for name, data in recovered.items():
-        (target / name).write_bytes(data)
+    with tempfile.TemporaryDirectory(prefix=".paper-restore-stage-", dir=target) as staging:
+        for name, data in recovered.items():
+            (Path(staging) / name).write_bytes(data)
+        for name in recovered:
+            os.replace(Path(staging) / name, target / name)
     return seen
 
 
