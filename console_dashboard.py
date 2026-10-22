@@ -314,10 +314,10 @@ class ConsoleDashboard:
                 head = (
                     f"{clean(str(snapshot.get('updated_at') or '--'))[:19]} PAPER "
                     f"{status_marker} {'[PAUSED] ' if snapshot.get('entries_paused') else ''}"
-                    f"QUALITY {quality} | DATA {freshness} | "
+                    f"QUALITY {quality} | {quality_detail} | DATA {freshness} | "
                     f"HEALTH {max(0, 10-len(invalid)-len(missing))}/10 | "
                     f"INVALID {len(invalid)} | MISSING {len(missing)} | "
-                    f"FIRST BAD {invalid[0] if invalid else '-'} | {quality_detail} | "
+                    f"FIRST BAD {invalid[0] if invalid else '-'} | "
                 )
                 tail = (
                     f"PnL {money(report.get('net_pnl'), True)} | CASH {portfolio[0]} | "
