@@ -79,7 +79,7 @@ def safe_extract_zip(content: bytes, target: Path):
             if stat.S_ISLNK(mode):
                 raise ValueError("Archive member is symlink")
             if name in FILES and info.file_size > (MAX_SQLITE_BYTES if name == "paper_forward.db" else MAX_FILE_BYTES):
-                raise ValueError("Oversized paper file")
+                raise ValueError(f"Oversized paper file: {name} ({info.file_size} bytes; limit {MAX_SQLITE_BYTES if name == 'paper_forward.db' else MAX_FILE_BYTES})")
             if info.compress_size < 0 or info.compress_size > MAX_ARCHIVE_BYTES:
                 raise ValueError("Invalid paper ZIP compressed member size")
             total_compressed += info.compress_size
