@@ -42,6 +42,19 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_oversized_historical_report_is_ignored_not_extracted(self):
+        db = sqlite_bytes()
+        report = b"r" * 4096
+        payload = archive([
+            ("paper_forward.db", db),
+            ("forward_reports/large.csv", report),
+        ])
+        with mock.patch.object(module, "MAX_FILE_BYTES", 1024):
+            restored = module.safe_extract_zip(payload, self.path)
+        self.assertEqual(restored, {"paper_forward.db"})
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), db)
+        self.assertFalse((self.path / "forward_reports").exists())
+
     def test_paginated_artifact_list_fails_closed_on_missing_second_page(self):
         from unittest.mock import Mock
         import sys
