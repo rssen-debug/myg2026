@@ -140,9 +140,9 @@ def safe_extract_zip(content: bytes, target: Path):
         db.write_bytes(recovered["paper_forward.db"])
         try:
             with sqlite3.connect(db) as c:
-                integrity = c.execute("PRAGMA quick_check").fetchone()
+                integrity = c.execute("PRAGMA integrity_check").fetchone()
                 if not integrity or integrity[0] != "ok":
-                    raise ValueError("Restored paper SQLite integrity check failed")
+                    raise ValueError("Restored paper SQLite full integrity check failed")
         except sqlite3.DatabaseError as exc:
             raise ValueError("Invalid paper SQLite database") from exc
     # Stage all members before replacing existing PAPER state.
