@@ -289,11 +289,12 @@ class ConsoleDashboard:
             freshness = valuation_freshness(snapshot.get("report_as_of"))
             # Detect changed invalid numeric inputs without logging their raw values.
             invalid_values = tuple((key, str(report.get(key))[:80]) for key in invalid)
+            # Report the reason for a quality alert without exposing untrusted raw values.
             # Track key portfolio values even when their validity does not change.
             # Only bounded summaries are emitted, never raw untrusted values.
             portfolio = (money(report.get("cash")), money(report.get("total_port")))
             quality = "ALERT" if invalid or freshness != "FRESH" else "PARTIAL" if missing else "OK"
-            quality_detail = ("INVALID DATA" if invalid else "VALUATION " + freshness) if quality == "ALERT" else ("MISSING FIELDS" if missing else "VERIFIED FIELDS")
+            quality_detail = ("INVALID DATA" if invalid else "VALUATION " + freshness) if quality == "ALERT" else ("MISSING FIELDS" if missing else "FINITE METRICS ONLY")
             # Make safety-relevant changes visible without claiming the trading engine is paused.
             status_marker = "[!]" if quality == "ALERT" else "[?]" if quality == "PARTIAL" else "[+]"
             signature = (snapshot.get("status"), snapshot.get("entries_paused"),
