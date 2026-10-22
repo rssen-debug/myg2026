@@ -102,7 +102,7 @@ def frame(snapshot, width=118, height=38, color=True):
     current_run_id = os.getenv("GITHUB_RUN_ID")
     restore = latest_restore_event(run_id=current_run_id) if current_run_id else None
     if restore and restore["status"] == "RESTORED":
-        row(f"◆ RESTORE VERIFIED  {restore['status']} | artifact {restore.get('artifact_id') or '--'} | {restore.get('utc', '--')} | PAPER ONLY", "1;36")
+        row(f"◆ RESTORE VERIFIED  {restore['status']} | artifact {restore.get('artifact_id') or '--'} | {restore.get('utc', '--')} | EJ KONTINUERLIG HISTORIK", "1;36")
     elif restore and restore["status"] == "FIRST_RUN":
         row("◇ RESTORE FIRST RUN  NY HISTORIK · INGEN TIDIGARE SQLITE · EJ KONTINUERLIG DATA | PAPER ONLY", "1;33")
     elif not current_run_id:
