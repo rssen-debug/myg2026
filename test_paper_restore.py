@@ -45,7 +45,7 @@ class TestSafePaperRestore(unittest.TestCase):
         original = sqlite_bytes()
         (self.path / "paper_forward.db").write_bytes(original)
         payload = bytearray(archive([("paper_forward.db", original)]))
-        central = payload.find(b"PK\\x01\\x02")
+        central = payload.find(bytes((80, 75, 1, 2)))
         self.assertGreaterEqual(central, 0)
         payload[central + 8] |= 0x01  # Central-directory encryption flag
         with self.assertRaisesRegex(ValueError, "Encrypted paper ZIP member"):
