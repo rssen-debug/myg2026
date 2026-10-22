@@ -80,6 +80,22 @@ def percentage(value):
         return "--"
 
 
+def valuation_freshness(as_of, now=None):
+    """Treat missing, invalid, naive, and future timestamps as unverified."""
+    if not isinstance(as_of, str) or not as_of.strip():
+        return "MISSING"
+    try:
+        timestamp = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
+        if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+            return "INVALID"
+        age = ((now or datetime.now(timezone.utc)) - timestamp).total_seconds()
+        if age < -5:
+            return "FUTURE"
+        return "STALE" if age > 30 else "FRESH"
+    except (ValueError, TypeError, OverflowError):
+        return "INVALID"
+
+
 def latest_restore_event(path=Path("forward_pulse_runs.jsonl"), run_id=None):
     """Read only the tail of the audit log; never imply a restore succeeded."""
     try:
@@ -167,8 +183,12 @@ def frame(snapshot, width=118, height=38, color=True):
     else:
         row("◇ RESTORE UNVERIFIED  ○ SAKNAR BEVIS FÖR AKTUELL RUN-ID | PAPER ONLY", "1;33")
     as_of = snapshot.get("report_as_of")
-    stale = bool(as_of and (datetime.now(timezone.utc)-datetime.fromisoformat(as_of)).total_seconds() > 30)
-    row(("VÄRDERING INAKTUELL. Senast: " if stale else "Värderad: ") + str(as_of or "saknas") + " | Lönsamhet EJ verifierad", "33" if stale else "2")
+    freshness = valuation_freshness(as_of)
+    if freshness == "FRESH":
+        row("◆ VÄRDERING FÄRSK  " + str(as_of) + " | Lönsamhet EJ verifierad", "1;36")
+    else:
+        row("◇ VÄRDERING " + freshness + "  " + str(as_of or "saknas") +
+            " | DATA EJ VERIFIERAD · Lönsamhet EJ verifierad", "1;33")
     exits = snapshot.get("exit_rules", {})
     row(f"SL -{exits.get('INITIAL_STOP_LOSS_PCT', '--')}% | TP1 +{exits.get('TAKE_PROFIT_1_PCT', '--')}%: sälj 40% | TP2 +{exits.get('TAKE_PROFIT_2_PCT', '--')}%: sälj 35% | Trailing {exits.get('MOONBAG_TRAILING_PCT', '--')}%")
     rows.append(rule)
