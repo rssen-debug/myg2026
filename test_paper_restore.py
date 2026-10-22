@@ -80,7 +80,7 @@ class TestSafePaperRestore(unittest.TestCase):
         requests_stub.get.side_effect = [first, second]
         with mock.patch.dict(os.environ, {
             "GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "test-token"
-        }), mock.patch.dict(sys.modules, {"requests": requests_stub}), \\
+        }), mock.patch.dict(sys.modules, {"requests": requests_stub}), \
                 mock.patch.object(module, "event") as event_stub:
             module.main()
         self.assertEqual(requests_stub.get.call_count, 2)
