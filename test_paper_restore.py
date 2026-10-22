@@ -42,6 +42,21 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_restored_sqlite_integrity_check_uses_read_only_uri(self):
+        db = sqlite_bytes()
+        payload = archive([("paper_forward.db", db)])
+        original_connect = sqlite3.connect
+        seen = []
+        def checking_connect(database, *args, **kwargs):
+            if isinstance(database, str) and "paper-restore-" in database:
+                seen.append((database, kwargs.copy()))
+            return original_connect(database, *args, **kwargs)
+        with mock.patch.object(module.sqlite3, "connect", side_effect=checking_connect):
+            module.safe_extract_zip(payload, self.path)
+        self.assertTrue(seen)
+        self.assertTrue(all("mode=ro" in url and options.get("uri") is True
+                            for url, options in seen))
+
     def test_oversized_database_error_identifies_file_and_limit(self):
         db = sqlite_bytes()
         payload = archive([("paper_forward.db", db)])
