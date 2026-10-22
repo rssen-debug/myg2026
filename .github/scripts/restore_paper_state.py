@@ -280,6 +280,11 @@ def main():
     # Skip such an explicitly incomplete archive, but never accept corrupt,
     # unknown, path-traversing or invalid SQLite data. Keep the gap visible.
     for candidate in sorted(available, key=lambda a: a.get("created_at", ""), reverse=True):
+        declared_size = candidate.get("size_in_bytes")
+        if declared_size is not None and (type(declared_size) is not int or declared_size < 0):
+            raise ValueError("Invalid PAPER artifact size metadata")
+        if declared_size is not None and declared_size > MAX_ARCHIVE_BYTES:
+            raise ValueError("PAPER artifact declared size exceeds archive limit")
         archive = requests.get(candidate["archive_download_url"], headers=headers, timeout=(15, 90))
         archive.raise_for_status()
         expected_digest = candidate.get("digest")
