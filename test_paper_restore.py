@@ -146,8 +146,12 @@ class TestSafePaperRestore(unittest.TestCase):
         (self.path / "paper_forward.db").write_bytes(original)
         (self.path / "paper_forward.settings.json").write_bytes(b"old")
         real_replace = os.replace
+        failures = [1]
         def fail_publish(src, dst):
-            if Path(src).name == "paper_forward.settings.json" and ".paper-restore-stage-" in str(src) and Path(dst).parent == self.path:
+            if (failures and Path(src).name == "paper_forward.settings.json"
+                    and ".paper-restore-stage-" in str(src)
+                    and Path(dst).parent == self.path):
+                failures.pop()
                 raise OSError("simulated publish failure")
             return real_replace(src, dst)
         with mock.patch.object(module.os, "replace", side_effect=fail_publish):
