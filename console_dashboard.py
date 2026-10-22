@@ -330,9 +330,19 @@ class ConsoleDashboard:
                     f"BAD [{','.join(invalid[:3]) or '-'}] "
                     f"MISS [{','.join(missing[:3]) or '-'}] | "
                 )
-                budget = max(0, 220 - len(clean(head)) - len(clean(tail)) - 1)
-                line = clean(head) + fit_ellipsis(detail, budget).rstrip() + " " + clean(tail)
-                self.stream.write(line[:220] + "\n")
+                # Reserve the safety tail first. Never slice the finished line:
+                # that previously truncated LIVE LOCKED in long status messages.
+                safe_tail = clean(tail)
+                available = max(0, 220 - len(safe_tail) - 1)
+                safe_head = clean(head)
+                if len(safe_head) > available:
+                    safe_head = fit_ellipsis(safe_head, available).rstrip()
+                    detail_text = ""
+                else:
+                    detail_budget = available - len(safe_head)
+                    detail_text = fit_ellipsis(detail, detail_budget).rstrip()
+                line = (safe_head + detail_text).rstrip() + " " + safe_tail
+                self.stream.write(line + "\n")
                 self.stream.flush()
                 self.last_plain_status = signature
             return
