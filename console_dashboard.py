@@ -305,6 +305,7 @@ class ConsoleDashboard:
                     f"PnL {money(report.get('net_pnl'), True)} | "
                     f"CASH {portfolio[0]} | EQUITY {portfolio[1]} | "
                     f"ENTRIES {'PAUSED' if snapshot.get('entries_paused') else 'ACTIVE'} | "
+                    f"POSITIONS {len(snapshot.get('positions') or [])} | "
                     f"{status_marker} QUALITY {quality} | "
                     f"DATA {freshness} | INVALID {len(invalid)} "
                     f"[{','.join(invalid[:3]) or '-'}] | MISSING {len(missing)} "
