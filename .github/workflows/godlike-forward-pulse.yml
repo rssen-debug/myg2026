@@ -131,10 +131,12 @@ jobs:
           import hashlib, json
           from pathlib import Path
           db = Path("paper_artifact/paper_forward.db")
+          with db.open("rb") as source:
+              digest = hashlib.file_digest(source, "sha256").hexdigest()
           manifest = {"format": 1, "database": db.name, "bytes": db.stat().st_size,
-                      "sha256": hashlib.file_digest(db.open("rb"), "sha256").hexdigest()}
+                      "sha256": digest}
           Path("paper_artifact/snapshot_manifest.json").write_text(
-              json.dumps(manifest, sort_keys=True) + "\\n", encoding="utf-8")
+              json.dumps(manifest, sort_keys=True) + "\n", encoding="utf-8")
           PY
 
       - name: Retain validated PAPER snapshot for resumption
