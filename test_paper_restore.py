@@ -335,7 +335,7 @@ class TestSafePaperRestore(unittest.TestCase):
         recent = archive([("forward_profit_gate.json", b'{"status":"NOT_READY"}')])
         previous = archive([("paper_forward.db", sqlite_bytes())])
         response_list = Mock()
-        response_list.json.return_value = {"artifacts": [
+        response_list.json.return_value = {"total_count": 2, "artifacts": [
             {"name":"godlike-forward-state","id":20,"expired":False,
              "created_at":"2026-10-14T19:00:00Z","archive_download_url":"https://example.test/20",
              "workflow_run":{"id":20}},
