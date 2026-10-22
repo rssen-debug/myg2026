@@ -280,6 +280,7 @@ def main():
     # A previous failed run may have uploaded ONLY diagnostics (no SQLite).
     # Skip such an explicitly incomplete archive, but never accept corrupt,
     # unknown, path-traversing or invalid SQLite data. Keep the gap visible.
+    skipped_report_ids = []
     for candidate in sorted(available, key=lambda a: a.get("created_at", ""), reverse=True):
         declared_size = candidate.get("size_in_bytes")
         if declared_size is not None and (type(declared_size) is not int or declared_size < 0):
@@ -371,9 +372,12 @@ def main():
             restored = safe_extract_zip(archive_bytes, Path("."))
         except ValueError as exc:
             if str(exc) == "No paper_forward.db in previous run":
-                event("SKIP_REPORT_ONLY_ARTIFACT", artifact_id=candidate["id"], detail="missing SQLite")
+                skipped_report_ids.append(candidate["id"])
+                print(f"PAPER_STATE: SKIP_REPORT_ONLY_ARTIFACT id={candidate['id']} (missing SQLite)")
                 continue
             raise
+        for skipped_id in skipped_report_ids:
+            event("SKIP_REPORT_ONLY_ARTIFACT", artifact_id=skipped_id, detail="missing SQLite")
         event("RESTORED", artifact_id=candidate["id"], detail=f"{len(restored)} paper state files")
         print(f"Restored prior paper state artifact ID {candidate['id']}; this is NOT continuous coverage.")
         return
