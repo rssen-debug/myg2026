@@ -103,6 +103,22 @@ class TestCandidateCountLogRefresh(unittest.TestCase):
         self.assertEqual(len(output.getvalue().splitlines()), 2)
         self.assertIn("21 tok", output.getvalue().splitlines()[-1])
 
+class TestQualityReasonLabel(unittest.TestCase):
+    def test_plain_quality_label_explains_warning_cause(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        data["report_as_of"] = "bad-timestamp"
+        dashboard.draw(data)
+        self.assertIn("QUALITY ALERT (VALUATION INVALID)", output.getvalue())
+        data["report"]["net_pnl"] = "NaN"
+        dashboard.draw(data)
+        self.assertIn("QUALITY ALERT (INVALID DATA)", output.getvalue().splitlines()[-1])
+        data["report"]["net_pnl"] = "-1.00"
+        data["report_as_of"] = datetime.now(timezone.utc).isoformat()
+        dashboard.draw(data)
+        self.assertIn("QUALITY PARTIAL (MISSING FIELDS)", output.getvalue().splitlines()[-1])
+
 class TestNonInteractiveQualityStream(unittest.TestCase):
     def test_quality_change_emits_new_line_without_duplicate_spam(self):
         output = io.StringIO()
