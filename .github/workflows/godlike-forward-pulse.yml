@@ -42,6 +42,7 @@ jobs:
         run: python .github/scripts/restore_paper_state.py
 
       - name: Run bounded real-market quotes as PAPER only, never broadcast
+        id: paper_runtime
         shell: bash
         run: |
           set +e
@@ -57,6 +58,7 @@ jobs:
           fi
 
       - name: Verify no real capital used and SQLite ledger is intact
+        id: paper_verify
         shell: bash
         run: |
           python - <<'PY'
@@ -108,7 +110,7 @@ jobs:
         run: python paper_order_stage_audit.py --db paper_forward.db --output forward_order_stage_audit.json
       # Reserve time for a large SQLite backup and artifact upload after the bounded runtime.
       - name: Prepare consistent PAPER artifact snapshot
-        if: always()
+        if: steps.paper_runtime.outcome == 'success' && steps.paper_verify.outcome == 'success'
         id: snapshot
         shell: bash
         run: |
