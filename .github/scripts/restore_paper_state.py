@@ -340,9 +340,9 @@ def main():
         if download_url != archive_url:
             with requests.get(download_url, headers=download_headers, timeout=(15, 90),
                               stream=True, allow_redirects=False) as archive:
-                archive.raise_for_status()
                 if archive.status_code in (301, 302, 303, 307, 308):
                     raise ValueError("Nested PAPER artifact redirect rejected")
+                archive.raise_for_status()
                 chunks, total_bytes = [], 0
                 for chunk in archive.iter_content(chunk_size=1024 * 1024):
                     if not chunk:
