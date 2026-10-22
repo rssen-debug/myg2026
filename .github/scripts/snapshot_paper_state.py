@@ -24,7 +24,7 @@ def snapshot_paper_db(source: Path, destination: Path) -> Path:
                                          dir=destination.parent, delete=False) as tmp:
             temporary = Path(tmp.name)
         # mode=ro never creates a missing source; backup() includes committed WAL.
-        with sqlite3.connect(f"file:{source.resolve().as_posix()}?mode=ro", uri=True,
+        with sqlite3.connect(f"{source.resolve().as_uri()}?mode=ro", uri=True,
                              timeout=30) as src:
             with sqlite3.connect(temporary, timeout=30) as dst:
                 src.backup(dst, pages=1024, sleep=0.05)
