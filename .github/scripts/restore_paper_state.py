@@ -70,6 +70,8 @@ def safe_extract_zip(content: bytes, target: Path):
             name = info.filename
             if not (name in FILES or recognized_report(name)) or name in seen or info.is_dir():
                 raise ValueError("Unexpected, repeated, or unsafe archive member")
+            if info.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
+                raise ValueError("Unsupported paper ZIP compression method")
             if info.flag_bits & 0x1:
                 raise ValueError("Encrypted paper ZIP member is not supported")
             mode = info.external_attr >> 16
