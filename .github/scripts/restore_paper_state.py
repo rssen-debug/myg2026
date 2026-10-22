@@ -282,6 +282,16 @@ def main():
     for candidate in sorted(available, key=lambda a: a.get("created_at", ""), reverse=True):
         archive = requests.get(candidate["archive_download_url"], headers=headers, timeout=(15, 90))
         archive.raise_for_status()
+        expected_digest = candidate.get("digest")
+        if expected_digest is not None:
+            if (not isinstance(expected_digest, str)
+                    or not expected_digest.startswith("sha256:")
+                    or len(expected_digest) != 71
+                    or any(ch not in "0123456789abcdef" for ch in expected_digest[7:])):
+                raise ValueError("Invalid PAPER artifact SHA256 digest metadata")
+            actual_digest = hashlib.sha256(archive.content).hexdigest()
+            if actual_digest != expected_digest[7:]:
+                raise ValueError("PAPER artifact SHA256 digest mismatch")
         try:
             restored = safe_extract_zip(archive.content, Path("."))
         except ValueError as exc:
