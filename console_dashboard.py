@@ -73,6 +73,7 @@ def frame(snapshot, width=118, height=38, color=True):
     row("◆ FORWARD-DATA  Historisk replay och kodtester bevisar INTE framtida vinst", "33")
     row("◇ HISTORIKSKYDD  [AUDIT] ZIP [SHA256/FAIL-CLOSED] · DB [READ-ONLY-CHECK] · PAGES [AUTO] · IDS [UNIQUE]", "3")
     row("  API [EXACT-URL] · AUDIT [SKIPS-LOGGED] · DB [512MiB]  |  PAPER ONLY", "3")
+    row("◇ RESTORE TRACE  SQLite-byteantal + källkörning sparas i forward_pulse_runs.jsonl", "36")
     as_of = snapshot.get("report_as_of")
     stale = bool(as_of and (datetime.now(timezone.utc)-datetime.fromisoformat(as_of)).total_seconds() > 30)
     row(("VÄRDERING INAKTUELL. Senast: " if stale else "Värderad: ") + str(as_of or "saknas") + " | Lönsamhet EJ verifierad", "33" if stale else "2")
