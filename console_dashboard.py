@@ -44,7 +44,8 @@ def money(value, signed=False):
 def metric_health(report):
     """Explicitly surface invalid numeric inputs instead of silently hiding them."""
     invalid = []
-    for key in ("net_pnl", "realized_pnl", "unrealized_pnl", "win_rate", "max_drawdown_pct"):
+    for key in ("net_pnl", "realized_pnl", "unrealized_pnl", "win_rate", "max_drawdown_pct",
+                "cash", "total_port", "fees", "profit_factor", "initial_cash"):
         value = report.get(key)
         if value is None:
             continue
@@ -126,7 +127,8 @@ def frame(snapshot, width=118, height=38, color=True):
     row(f"Avgifter {money(report.get('fees'))}   Avslutade {report.get('total_trades', 0)}   Win {percentage(report.get('win_rate'))}   PF {report.get('profit_factor') or '--'}   Max DD {percentage(report.get('max_drawdown_pct'))}")
     invalid_metrics = metric_health(report)
     if invalid_metrics:
-        row("◆ DATA QUALITY  INVALID METRICS: " + ", ".join(invalid_metrics[:5]) + " | PAPER ONLY", "1;31")
+        row("◆ DATA QUALITY  INVALID METRICS: " + ", ".join(invalid_metrics[:5]) +
+            (f" (+{len(invalid_metrics)-5} MORE)" if len(invalid_metrics) > 5 else "") + " | PAPER ONLY", "1;31")
     else:
         row("◇ DATA QUALITY  NUMERIC FIELDS VALID OR MISSING | PAPER ONLY", "2")
     row("◆ EVIDENSKONTROLL  PAPER MODELL / INTE LIVE-PnL  |  Färska köp- och säljofferter krävs", "1;33")
