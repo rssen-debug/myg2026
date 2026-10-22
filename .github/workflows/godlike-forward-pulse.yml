@@ -24,12 +24,12 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout isolated trading audit branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: godlike2026-paper-audit
 
       - name: Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
