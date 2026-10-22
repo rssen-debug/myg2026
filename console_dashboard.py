@@ -54,7 +54,7 @@ def latest_restore_event(path=Path("forward_pulse_runs.jsonl"), run_id=None):
             stream.seek(start)
             raw = stream.read()
             if start:
-                boundary = raw.find(b"\\n")
+                boundary = raw.find(b"\n")
                 raw = raw[boundary + 1:] if boundary >= 0 else b""
             tail = raw.decode("utf-8", errors="replace").splitlines()
         for line in reversed(tail):
