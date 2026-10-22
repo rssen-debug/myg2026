@@ -321,11 +321,11 @@ class TestNonInteractiveQualityStream(unittest.TestCase):
         dashboard.draw(data)
         line = output.getvalue()
         self.assertIn("INVALID 4", line)
-        self.assertIn("BAD [net_pnl,cash,fees]", line)
+        self.assertIn("FIRST BAD net_pnl", line)
         self.assertIn("MISSING", line)
         self.assertIn("MISSING 3", line)
         self.assertIn("…", line)
-        self.assertIn("…", line)  # bounded detail truncates before full field name
+        self.assertLessEqual(len(line.rstrip("\n")), 220)  # bounded log output
         self.assertNotIn("initial_cash]", line)
         dashboard.draw(data)
         self.assertEqual(len(output.getvalue().splitlines()), 1)
