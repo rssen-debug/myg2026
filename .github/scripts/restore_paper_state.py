@@ -228,7 +228,11 @@ def main():
     url = f"https://api.github.com/repos/{repo}/actions/artifacts"
     response = requests.get(url, headers=headers, params={"per_page":100, "name":"godlike-forward-state"}, timeout=30)
     response.raise_for_status()
-    artifacts = response.json().get("artifacts", [])
+    listing = response.json()
+    artifacts = listing.get("artifacts", [])
+    # Never silently ignore older recoverable snapshots beyond the first page.
+    if listing.get("total_count", len(artifacts)) > len(artifacts):
+        raise ValueError("PAPER artifact list is paginated; refusing incomplete history search")
     available = [a for a in artifacts if a.get("name") == "godlike-forward-state"
                  and not a.get("expired") and a.get("id")
                  and str(a.get("workflow_run",{}).get("id")) != os.getenv("GITHUB_RUN_ID")]
