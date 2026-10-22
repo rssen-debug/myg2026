@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from console_dashboard import frame, latest_restore_event, percentage, metric_health
+from console_dashboard import frame, latest_restore_event, percentage, metric_health, missing_metrics
 from paper_runtime import render_dashboard
 
 
@@ -37,6 +37,17 @@ class TestMetricLegendHUD(unittest.TestCase):
         self.assertIn("NETTO OKÄNT", output)
         self.assertIn("PF --", output)
 
+class TestMissingMetricHUD(unittest.TestCase):
+    def test_missing_and_invalid_metrics_are_distinct(self):
+        data = example()
+        data["report"]["net_pnl"] = None
+        data["report"]["win_rate"] = None
+        self.assertIn("net_pnl", missing_metrics(data["report"]))
+        output = frame(data, width=128, height=80, color=False)
+        self.assertIn("DATA QUALITY  ", output)
+        self.assertIn("MISSING:", output)
+        self.assertNotIn("INVALID METRICS:", output)
+
 class TestMetricQualityHUD(unittest.TestCase):
     def test_profit_factor_never_renders_raw_nonfinite_value(self):
         for value in ("NaN", "Infinity", "garbage"):
@@ -60,7 +71,8 @@ class TestMetricQualityHUD(unittest.TestCase):
 
     def test_dynamic_data_quality_indicator(self):
         healthy = frame(example(), width=128, height=80, color=False)
-        self.assertIn("DATA QUALITY  NUMERIC FIELDS VALID OR MISSING", healthy)
+        self.assertIn("DATA QUALITY  ", healthy)
+        self.assertTrue("MISSING:" in healthy or "ALL TRACKED METRICS FINITE" in healthy)
         bad = example()
         bad["report"]["net_pnl"] = "NaN"
         bad["report"]["win_rate"] = "broken"
