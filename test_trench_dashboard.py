@@ -2,10 +2,11 @@
 import unittest
 import json
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from console_dashboard import frame, latest_restore_event, percentage, metric_health, missing_metrics
+from console_dashboard import frame, latest_restore_event, percentage, metric_health, missing_metrics, valuation_freshness
 from paper_runtime import render_dashboard
 
 
@@ -25,6 +26,25 @@ def example():
         "events":[],"quotes":[],"discovery":{},
     }
 
+
+class TestValuationFreshnessHUD(unittest.TestCase):
+    def test_timestamp_freshness_fail_closed(self):
+        now = datetime(2026, 10, 22, 12, 0, tzinfo=timezone.utc)
+        self.assertEqual(valuation_freshness(None, now), "MISSING")
+        self.assertEqual(valuation_freshness("not-a-date", now), "INVALID")
+        self.assertEqual(valuation_freshness("2026-10-22T12:00:00", now), "INVALID")
+        self.assertEqual(valuation_freshness("2026-10-22T12:00:10Z", now), "FUTURE")
+        self.assertEqual(valuation_freshness("2026-10-22T11:59:00Z", now), "STALE")
+        self.assertEqual(valuation_freshness("2026-10-22T11:59:50Z", now), "FRESH")
+
+    def test_bad_timestamp_never_crashes_or_appears_fresh(self):
+        for bad in (None, "invalid", "2026-10-22T12:00:00"):
+            with self.subTest(bad=bad):
+                data = example()
+                data["report_as_of"] = bad
+                output = frame(data, width=128, height=80, color=False)
+                self.assertIn("DATA EJ VERIFIERAD", output)
+                self.assertNotIn("VÄRDERING FÄRSK", output)
 
 class TestMetricLegendHUD(unittest.TestCase):
     def test_missing_metrics_are_not_presented_as_zero(self):
