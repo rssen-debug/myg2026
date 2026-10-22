@@ -30,6 +30,14 @@ class TestRestoreEventHUD(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             self.assertIsNone(latest_restore_event(Path(folder) / "missing.jsonl"))
 
+    def test_does_not_mislabel_previous_run_as_current(self):
+        with tempfile.TemporaryDirectory() as folder:
+            log = Path(folder) / "forward_pulse_runs.jsonl"
+            log.write_text(json.dumps({"status": "RESTORED", "artifact_id": 7,
+                                       "run_id": "old-run"}) + "\n", encoding="utf-8")
+            self.assertIsNone(latest_restore_event(log, run_id="new-run"))
+            self.assertEqual(latest_restore_event(log, run_id="old-run")["artifact_id"], 7)
+
     def test_reads_latest_real_restore_event(self):
         with tempfile.TemporaryDirectory() as folder:
             log = Path(folder) / "forward_pulse_runs.jsonl"
