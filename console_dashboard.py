@@ -317,6 +317,7 @@ class ConsoleDashboard:
                     f"QUALITY {quality} | DATA {freshness} | "
                     f"HEALTH {max(0, 10-len(invalid)-len(missing))}/10 | "
                     f"INVALID {len(invalid)} | MISSING {len(missing)} | "
+                    f"FIRST BAD {invalid[0] if invalid else '-'} | "
                 )
                 tail = (
                     f"PnL {money(report.get('net_pnl'), True)} | CASH {portfolio[0]} | "
