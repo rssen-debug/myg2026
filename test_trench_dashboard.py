@@ -43,7 +43,7 @@ class TestTrenchMoonbagHUD(unittest.TestCase):
         self.assertIn("KAPITALSKYDD", output)
         self.assertIn("FORWARD-DATA", output)
         self.assertIn("HISTORIKSKYDD", output)
-        self.assertIn("[AUDIT] ZIP-GUARD → DB-CHECK → LINK-GUARD", output)
+        self.assertIn("[AUDIT] ZIP ✓? → DB ✓? → PATH ✓?", output)
         self.assertIn("Färska köp- och säljofferter", output)
 
     def test_without_trench_metrics_hud_does_not_invent_evidence(self):
