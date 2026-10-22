@@ -311,13 +311,13 @@ class ConsoleDashboard:
                 # Put actionable counts first and preserve the tail even at 220 columns.
                 # Reserve room for positions and discovery instead of truncating them.
                 # Reserve critical status and portfolio figures; truncate only field details.
+                # Place the exact failing field before optional details so it
+                # survives the 220-column budget alongside the LIVE LOCKED tail.
                 head = (
-                    f"{clean(str(snapshot.get('updated_at') or '--'))[:19]} PAPER "
-                    f"{status_marker} {'[PAUSED] ' if snapshot.get('entries_paused') else ''}"
-                    f"QUALITY {quality} | {quality_detail} | DATA {freshness} | "
-                    f"HEALTH {max(0, 10-len(invalid)-len(missing))}/10 | "
-                    f"INVALID {len(invalid)} | MISSING {len(missing)} | "
-                    f"FIRST BAD {invalid[0] if invalid else '-'} | "
+                    f"PAPER {status_marker} {'[PAUSED] ' if snapshot.get('entries_paused') else ''}"
+                    f"QUALITY {quality} | DATA {freshness} | {quality_detail} | "
+                    f"INVALID {len(invalid)} | FIRST BAD {invalid[0] if invalid else '-'} | "
+                    f"MISSING {len(missing)} | "
                 )
                 tail = (
                     f"PnL {money(report.get('net_pnl'), True)} | CASH {portfolio[0]} | "
