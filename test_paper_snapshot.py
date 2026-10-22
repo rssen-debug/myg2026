@@ -12,6 +12,32 @@ spec.loader.exec_module(module)
 
 
 class TestPaperSnapshot(unittest.TestCase):
+    def test_snapshot_artifact_roundtrip_through_restore(self):
+        """Exercise real backup + ZIP restoration with committed WAL evidence."""
+        import io
+        import zipfile
+        restore_path = Path(__file__).parent / ".github" / "scripts" / "restore_paper_state.py"
+        restore_spec = importlib.util.spec_from_file_location("paper_restore_roundtrip", restore_path)
+        restore = importlib.util.module_from_spec(restore_spec)
+        restore_spec.loader.exec_module(restore)
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            source, snapshot, recovered = root / "live.db", root / "artifact.db", root / "restored"
+            with sqlite3.connect(source) as writer:
+                writer.execute("PRAGMA journal_mode=WAL")
+                writer.execute("CREATE TABLE evidence (seq INTEGER PRIMARY KEY, mode TEXT)")
+                writer.execute("INSERT INTO evidence VALUES (1, 'PAPER')")
+                writer.commit()
+                module.snapshot_paper_db(source, snapshot)
+            archive = io.BytesIO()
+            with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as z:
+                z.write(snapshot, arcname="paper_forward.db")
+            restored = restore.safe_extract_zip(archive.getvalue(), recovered)
+            self.assertIn("paper_forward.db", restored)
+            with sqlite3.connect(recovered / "paper_forward.db") as conn:
+                self.assertEqual(conn.execute("SELECT mode FROM evidence").fetchone(), ("PAPER",))
+                self.assertEqual(conn.execute("PRAGMA quick_check").fetchone(), ("ok",))
+
     def test_backup_contains_committed_wal_rows(self):
         with tempfile.TemporaryDirectory() as root:
             source, dest = Path(root) / "source.db", Path(root) / "snapshot.db"
