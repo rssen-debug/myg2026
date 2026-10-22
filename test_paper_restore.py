@@ -456,6 +456,33 @@ class TestSafePaperRestore(unittest.TestCase):
         finally:
             os.chdir(cwd)
 
+    def test_streaming_download_stops_at_archive_limit(self):
+        from unittest.mock import Mock, patch
+        listing = Mock()
+        listing.json.return_value = {"total_count": 1, "artifacts": [{
+            "name": "godlike-forward-state", "id": 42, "expired": False,
+            "created_at": "2026-10-14T18:00:00Z",
+            "archive_download_url": "https://example.test/42",
+            "workflow_run": {"id": 42}
+        }]}
+        streamed = mock.MagicMock()
+        streamed.__enter__.return_value.iter_content.return_value = [
+            b"x" * (1024 * 1024) for _ in range(201)
+        ]
+        cwd = Path.cwd()
+        try:
+            os.chdir(self.path)
+            with patch.dict(os.environ, {
+                "GITHUB_REPOSITORY": "rssen-debug/myg2026",
+                "GITHUB_TOKEN": "synthetic-test-token",
+                "GITHUB_RUN_ID": "43",
+            }), patch("requests.get", side_effect=[listing, streamed]):
+                with self.assertRaisesRegex(ValueError, "streamed archive exceeds"):
+                    module.main()
+            self.assertFalse((self.path / "paper_forward.db").exists())
+        finally:
+            os.chdir(cwd)
+
     def test_artifact_digest_mismatch_preserves_existing_state(self):
         from unittest.mock import Mock, patch
         original = sqlite_bytes()
