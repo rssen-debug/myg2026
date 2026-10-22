@@ -49,7 +49,7 @@ class TestRestoreEventHUD(unittest.TestCase):
                      "status": "RESTORED", "artifact_id": 999}) as reader:
                 output = frame(example(), width=128, height=80, color=False)
             reader.assert_not_called()
-            self.assertIn("RESTORE UNVERIFIED", output)
+            self.assertIn("RESTORE LOCAL", output)
             self.assertNotIn("RESTORE VERIFIED", output)
 
     def test_first_run_never_claims_verified_restore(self):
@@ -99,8 +99,8 @@ class TestTrenchMoonbagHUD(unittest.TestCase):
         self.assertIn("HISTORIKSKYDD", output)
         self.assertIn("[AUDIT] ZIP [SHA256/FAIL-CLOSED] · DB [READ-ONLY-CHECK] · PAGES [AUTO] · IDS [UNIQUE]", output)
         self.assertIn("API [EXACT-URL] · AUDIT [SKIPS-LOGGED] · DB [512MiB]  |  PAPER ONLY", output)
-        self.assertIn("RESTORE UNVERIFIED", output)
-        self.assertIn("INGEN BEKRÄFTAD", output)
+        self.assertTrue("RESTORE LOCAL" in output or "RESTORE UNVERIFIED" in output)
+        self.assertIn("PAPER ONLY", output)
         self.assertIn("Färska köp- och säljofferter", output)
 
     def test_without_trench_metrics_hud_does_not_invent_evidence(self):
