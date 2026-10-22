@@ -21,7 +21,7 @@ concurrency:
 jobs:
   paper-only:
     runs-on: ubuntu-latest
-    timeout-minutes: 13
+    timeout-minutes: 25
     steps:
       - name: Checkout isolated trading audit branch
         uses: actions/checkout@v4
@@ -106,6 +106,7 @@ jobs:
       - name: Reconcile PAPER order stages and failures (QUOTED is not BOUGHT)
         if: always()
         run: python paper_order_stage_audit.py --db paper_forward.db --output forward_order_stage_audit.json
+      # Reserve time for a large SQLite backup and artifact upload after the bounded runtime.
       - name: Prepare consistent PAPER artifact snapshot
         if: always()
         id: snapshot
