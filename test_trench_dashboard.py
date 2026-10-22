@@ -27,6 +27,24 @@ def example():
     }
 
 
+class TestCompactStatusHUD(unittest.TestCase):
+    def test_critical_quality_status_visible_in_short_terminal(self):
+        data = example()
+        data["report"]["net_pnl"] = "NaN"
+        data["report"]["win_rate"] = None
+        data["report_as_of"] = "not-a-timestamp"
+        output = frame(data, width=90, height=12, color=False)
+        self.assertIn("STATUS  DATA INVALID", output)
+        self.assertIn("FEL 1", output)
+        self.assertIn("SAKNAS", output)
+        self.assertIn("PAPER ONLY", output)
+
+    def test_short_terminal_summary_shows_freshness(self):
+        data = example()
+        data["report_as_of"] = datetime.now(timezone.utc).isoformat()
+        output = frame(data, width=90, height=12, color=False)
+        self.assertIn("STATUS  DATA FRESH", output)
+
 class TestValuationFreshnessHUD(unittest.TestCase):
     def test_timestamp_freshness_fail_closed(self):
         now = datetime(2026, 10, 22, 12, 0, tzinfo=timezone.utc)
