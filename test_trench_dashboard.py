@@ -90,6 +90,19 @@ class TestCompactPositionCount(unittest.TestCase):
         dashboard.draw(data)
         self.assertEqual(len(output.getvalue().splitlines()), 2)
 
+class TestCandidateCountLogRefresh(unittest.TestCase):
+    def test_discovery_count_change_updates_plain_status(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        dashboard.draw(data)
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 1)
+        data["candidates"] = 21
+        dashboard.draw(data)
+        self.assertEqual(len(output.getvalue().splitlines()), 2)
+        self.assertIn("21 tok", output.getvalue().splitlines()[-1])
+
 class TestNonInteractiveQualityStream(unittest.TestCase):
     def test_quality_change_emits_new_line_without_duplicate_spam(self):
         output = io.StringIO()
