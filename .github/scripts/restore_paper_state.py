@@ -226,13 +226,34 @@ def main():
     headers = {"Authorization": f"Bearer {token}", "Accept":"application/vnd.github+json",
                "X-GitHub-Api-Version":"2022-11-28"}
     url = f"https://api.github.com/repos/{repo}/actions/artifacts"
-    response = requests.get(url, headers=headers, params={"per_page":100, "name":"godlike-forward-state"}, timeout=30)
-    response.raise_for_status()
-    listing = response.json()
-    artifacts = listing.get("artifacts", [])
-    # Never silently ignore older recoverable snapshots beyond the first page.
-    if listing.get("total_count", len(artifacts)) > len(artifacts):
-        raise ValueError("PAPER artifact list is paginated; refusing incomplete history search")
+    artifacts = []
+    page = 1
+    expected_total = None
+    while True:
+        response = requests.get(
+            url, headers=headers,
+            params={"per_page": 100, "page": page, "name": "godlike-forward-state"},
+            timeout=30,
+        )
+        response.raise_for_status()
+        listing = response.json()
+        batch = listing.get("artifacts", [])
+        total = listing.get("total_count")
+        if (type(total) is not int or total < 0 or not isinstance(batch, list)
+                or len(batch) > 100):
+            raise ValueError("Invalid PAPER artifact pagination response")
+        if expected_total is None:
+            expected_total = total
+        elif total != expected_total:
+            raise ValueError("PAPER artifact listing changed during pagination")
+        artifacts.extend(batch)
+        if len(artifacts) >= expected_total:
+            if len(artifacts) != expected_total:
+                raise ValueError("PAPER artifact pagination count mismatch")
+            break
+        if not batch or len(batch) < 100:
+            raise ValueError("Incomplete PAPER artifact pagination")
+        page += 1
     available = [a for a in artifacts if a.get("name") == "godlike-forward-state"
                  and not a.get("expired") and a.get("id")
                  and str(a.get("workflow_run",{}).get("id")) != os.getenv("GITHUB_RUN_ID")]
