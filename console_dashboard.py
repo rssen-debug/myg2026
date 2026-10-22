@@ -297,8 +297,8 @@ class ConsoleDashboard:
             quality_detail = ("INVALID DATA" if invalid else "VALUATION " + freshness) if quality == "ALERT" else ("MISSING FIELDS" if missing else "FINITE METRICS ONLY")
             # Make safety-relevant changes visible without claiming the trading engine is paused.
             status_marker = "[!]" if quality == "ALERT" else "[?]" if quality == "PARTIAL" else "[+]"
-            signature = (snapshot.get("status"), snapshot.get("entries_paused"),
-                         str(report.get("net_pnl")), len(snapshot.get("positions", [])),
+            signature = (clean(snapshot.get("status")), bool(snapshot.get("entries_paused")),
+                         money(report.get("net_pnl"), True), len(snapshot.get("positions") or []),
                          tuple(invalid), tuple(missing), freshness, invalid_values, portfolio,
                          snapshot.get("candidates", 0))
             if signature != self.last_plain_status:
