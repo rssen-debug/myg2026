@@ -1,7 +1,10 @@
 """PAPER console must show trench telemetry and moonbag without claiming safety."""
 import unittest
+import json
+import tempfile
+from pathlib import Path
 
-from console_dashboard import frame
+from console_dashboard import frame, latest_restore_event
 from paper_runtime import render_dashboard
 
 
@@ -21,6 +24,21 @@ def example():
         "events":[],"quotes":[],"discovery":{},
     }
 
+
+class TestRestoreEventHUD(unittest.TestCase):
+    def test_missing_restore_event_is_unverified(self):
+        with tempfile.TemporaryDirectory() as folder:
+            self.assertIsNone(latest_restore_event(Path(folder) / "missing.jsonl"))
+
+    def test_reads_latest_real_restore_event(self):
+        with tempfile.TemporaryDirectory() as folder:
+            log = Path(folder) / "forward_pulse_runs.jsonl"
+            log.write_text("\\n".join([
+                json.dumps({"status": "RESTORED", "artifact_id": 7, "utc": "2026-10-21T12:00:00Z"}),
+                json.dumps({"status": "SKIP_REPORT_ONLY_ARTIFACT", "artifact_id": 9}),
+                json.dumps({"status": "RESTORED", "artifact_id": 11, "utc": "2026-10-22T12:00:00Z"}),
+            ]) + "\\n", encoding="utf-8")
+            self.assertEqual(latest_restore_event(log)["artifact_id"], 11)
 
 class TestTrenchMoonbagHUD(unittest.TestCase):
     def test_text_dashboard_marks_trench_as_unverified_observations(self):
