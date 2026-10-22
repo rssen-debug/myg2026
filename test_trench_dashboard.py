@@ -28,6 +28,19 @@ def example():
     }
 
 
+class TestNoFalseVerificationLabel(unittest.TestCase):
+    def test_finite_metrics_are_not_described_as_verified_trading(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        data["report_as_of"] = datetime.now(timezone.utc).isoformat()
+        data["report"].update(win_rate=50, max_drawdown_pct=1, profit_factor=1.2)
+        dashboard.draw(data)
+        line = output.getvalue()
+        self.assertIn("FINITE METRICS ONLY", line)
+        self.assertNotIn("VERIFIED FIELDS", line)
+        self.assertIn("PAPER", line)
+
 class TestPriorityLogOrder(unittest.TestCase):
     def test_data_quality_precedes_portfolio_in_bounded_log(self):
         output = io.StringIO()
