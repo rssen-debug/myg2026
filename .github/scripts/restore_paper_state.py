@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import io
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -22,6 +23,7 @@ FILES = {
     "paper_forward.log",
     "paper_forward.runs.jsonl",
     "forward_pulse_runs.jsonl",
+    "snapshot_manifest.json",
 }
 # Artifacts also contain published reports. Validate their known names but
 # do not restore stale reports into the new run. Only state files are resumed.
@@ -103,6 +105,22 @@ def safe_extract_zip(content: bytes, target: Path):
             if len(data) != info.file_size:
                 raise ValueError("Paper state member has incorrect size")
             recovered[info.filename] = data
+    if "snapshot_manifest.json" in recovered:
+        try:
+            manifest = json.loads(recovered["snapshot_manifest.json"])
+            if (type(manifest) is not dict or set(manifest) != {"format", "database", "bytes", "sha256"}
+                    or manifest["format"] != 1 or manifest["database"] != "paper_forward.db"
+                    or type(manifest["bytes"]) is not int
+                    or manifest["bytes"] != len(recovered["paper_forward.db"])
+                    or type(manifest["sha256"]) is not str
+                    or len(manifest["sha256"]) != 64
+                    or not all(c in "0123456789abcdef" for c in manifest["sha256"])
+                    or hashlib.sha256(recovered["paper_forward.db"]).hexdigest() != manifest["sha256"]):
+                raise ValueError("PAPER snapshot manifest mismatch")
+        except (UnicodeDecodeError, json.JSONDecodeError, TypeError, KeyError) as exc:
+            raise ValueError("Invalid PAPER snapshot manifest") from exc
+        # The manifest is evidence, not a runtime state file.
+        del recovered["snapshot_manifest.json"]
     # A SQLite DB without its WAL is not a complete snapshot. Fail closed
     # rather than silently accepting a potentially stale or incomplete state.
     if recovered["paper_forward.db"][:16] != bytes((83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0)):
