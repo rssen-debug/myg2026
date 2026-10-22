@@ -42,6 +42,14 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_oversized_database_error_identifies_file_and_limit(self):
+        db = sqlite_bytes()
+        payload = archive([("paper_forward.db", db)])
+        with mock.patch.object(module, "MAX_SQLITE_BYTES", len(db) - 1):
+            with self.assertRaisesRegex(ValueError, r"Oversized paper file: paper_forward.db"):
+                module.safe_extract_zip(payload, self.path)
+        self.assertFalse((self.path / "paper_forward.db").exists())
+
     def test_oversized_historical_report_is_ignored_not_extracted(self):
         db = sqlite_bytes()
         report = b"r" * 4096
