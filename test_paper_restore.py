@@ -41,6 +41,18 @@ class TestSafePaperRestore(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_streaming_restore_accepts_multi_chunk_sqlite(self):
+        original = sqlite_bytes()
+        payload = archive([
+            ("paper_forward.db", original),
+            ("paper_forward.log", b"paper"),
+        ])
+        with mock.patch.object(module, "MAX_SQLITE_BYTES", len(original) + 1024):
+            with mock.patch.object(module, "MAX_FILE_BYTES", 1024):
+                restored = module.safe_extract_zip(payload, self.path)
+        self.assertIn("paper_forward.db", restored)
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
+
     def test_declared_size_preflight_preserves_existing_db(self):
         original = sqlite_bytes()
         (self.path / "paper_forward.db").write_bytes(original)
