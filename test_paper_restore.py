@@ -129,6 +129,18 @@ class TestSafePaperRestore(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"unsafe"):
             module.safe_extract_zip(archive([("paper_forward.db",sqlite_bytes()),("paper_forward.db",sqlite_bytes())]),self.path)
 
+    def test_corrupt_db_never_overwrites_existing_state(self):
+        original = sqlite_bytes()
+        (self.path / "paper_forward.db").write_bytes(original)
+        (self.path / "paper_forward.settings.json").write_bytes(b"existing")
+        with self.assertRaisesRegex(ValueError, "Invalid paper SQLite"):
+            module.safe_extract_zip(archive([
+                ("paper_forward.db", b"invalid sqlite"),
+                ("paper_forward.settings.json", b"replacement"),
+            ]), self.path)
+        self.assertEqual((self.path / "paper_forward.db").read_bytes(), original)
+        self.assertEqual((self.path / "paper_forward.settings.json").read_bytes(), b"existing")
+
     def test_corrupt_db_rejected(self):
         with self.assertRaisesRegex(ValueError,"Invalid paper SQLite"):
             module.safe_extract_zip(archive([("paper_forward.db",b"not sqlite")]),self.path)
