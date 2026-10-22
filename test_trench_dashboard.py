@@ -47,6 +47,19 @@ class TestNoFalseVerificationLabel(unittest.TestCase):
         self.assertNotIn("VERIFIED FIELDS", line)
         self.assertIn("PAPER", line)
 
+class TestLiveLockedTailHUD(unittest.TestCase):
+    def test_safety_label_survives_truncation(self):
+        output = io.StringIO()
+        dashboard = ConsoleDashboard(stream=output)
+        data = example()
+        data["status"] = "X" * 500
+        data["report"]["net_pnl"] = "NaN"
+        dashboard.draw(data)
+        line = output.getvalue().rstrip("\\n")
+        self.assertTrue(line.endswith("LIVE LOCKED"))
+        self.assertIn("[!] QUALITY ALERT", line)
+        self.assertLessEqual(len(line), 220)
+
 class TestPriorityLogOrder(unittest.TestCase):
     def test_data_quality_precedes_portfolio_in_bounded_log(self):
         output = io.StringIO()
